@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 해외 주식 뉴스 RSS를 버튼으로 수집하고, Claude API로 한국어 제목·요약·카테고리 분류를 만들어 카드로 보여 주는 다중 사용자 웹 앱이다. 원하는 뉴스는 사용자의 노션에 저장한다. 요구사항, 데이터 모델, 처리 흐름, 구현 순서, 검증 기준은 모두 `PRD.md`에 있으니 기능 작업 전에 해당 절을 먼저 읽는다.
 
-현재 상태: 패키지 설치만 끝났고 앱 코드는 없다(`src/app`은 create-next-app 기본 파일). 구현은 PRD 12절 순서(Clerk → Drizzle 스키마 → 카테고리 CRUD → RSS·Claude 수집 → 카드 목록 → 노션 OAuth·MCP → Vercel)로 진행한다.
+현재 상태: PRD 12절 1단계(Clerk)와 2단계(DB 스키마) 완료. 구현은 PRD 12절 순서(Clerk → Drizzle 스키마 → 카테고리 CRUD → RSS·Claude 수집 → 카드 목록 → 노션 OAuth·MCP → Vercel)로 진행한다.
 
 ## 명령어
 
@@ -16,7 +16,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` — 프로덕션 빌드와 타입 검사. PRD의 기본 검증 기준이다.
 - `npm run lint` — ESLint (flat config, `eslint-config-next`의 core-web-vitals + typescript)
 - 테스트 러너는 아직 없다.
-- Drizzle 설정(`drizzle.config.ts`)과 마이그레이션 스크립트는 아직 없다. 2단계에서 `drizzle-kit`과 `dotenv`로 추가할 예정이다.
+- `npm run db:generate -- --name <이름>` — `src/db/schema.ts` 변경으로 `drizzle/`에 마이그레이션 SQL 생성
+- `npm run db:migrate` — 마이그레이션을 `DATABASE_URL`의 Neon DB에 적용 (`drizzle.config.ts`가 `.env.local`을 읽는다)
+- `npm run db:studio` — 브라우저로 DB 보기
+- `npm run db:seed -- <Clerk userId>` — 개발용 예제 기사 5건과 기본 카테고리를 넣는다(`scripts/seed.ts`, 재실행해도 중복 없음). 예제 기사 URL은 `https://example.com/sample/`로 시작한다.
+- 스키마는 생성된 마이그레이션 파일로만 바꾼다. 이미 적용된 `drizzle/*.sql`은 고치지 않는다.
+
+## 데이터베이스
+
+- `src/db/index.ts`의 `db`는 Neon **HTTP** 드라이버(`drizzle-orm/neon-http`)다. `db.transaction()`은 지원하지 않으니 여러 쿼리는 `db.batch()`로 묶거나 단일 SQL 문으로 처리한다. `server-only`라 서버 코드에서만 import한다.
+- `casing: "snake_case"`가 `drizzle.config.ts`와 `src/db/index.ts` 양쪽에 있다. 스키마에는 컬럼 이름을 적지 않고 camelCase 필드만 쓴다.
+- `userId` 컬럼은 Clerk 사용자 ID이며 FK가 없다. `user_articles.categoryId`는 `ON DELETE SET NULL`이라 카테고리를 삭제하면 미분류가 된다. 다만 FK는 카테고리 소유자를 검사하지 않으므로, 분류를 저장할 때 같은 사용자의 카테고리인지 코드에서 확인한다.
+- `articles`에는 번역에 성공한 기사만 넣는다. 그래서 `titleKo`와 `summaryKo`는 NOT NULL이다.
+- `notion_connections`는 사용자당 한 행이다. `clientId`는 토큰보다 먼저 저장되고, 연결이 끊겨도 토큰 컬럼만 null로 지운다.
 
 ## 스택과 설정상 주의점
 
@@ -80,4 +92,4 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 저장소 환경
 
-- Windows, D: 드라이브(파일 소유자를 기록하지 않는 파일 시스템이라 git `safe.directory` 예외가 전역 설정에 등록되어 있다). 기본 브랜치는 `master`다.
+- Windows, `C:\ai-news-collector`(NTFS). 기본 브랜치는 `main`이다.
