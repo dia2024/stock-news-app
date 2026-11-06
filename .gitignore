@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# clerk (키 없이 실행할 때 생성되는 임시 개발 키)
+.clerk/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

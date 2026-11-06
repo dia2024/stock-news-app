@@ -26,6 +26,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - 페이지와 레이아웃 props에는 전역 타입 `PageProps<"/경로">`, `LayoutProps<"/경로">`를 쓴다.
 - **`next.config.ts`에 `cacheComponents: true`와 `partialPrefetching: true`가 켜져 있다.** 데이터 조회는 기본적으로 동적이고, 캐시는 `use cache`로 명시한다. 라우트에 `export const runtime`을 두면 안 된다(Cache Components는 Node.js 런타임 전용). 오래 걸리는 라우트에는 `maxDuration`만 지정한다.
 - **Tailwind CSS 4는 PostCSS가 아니라 Turbopack 로더(`@tailwindcss/turbopack`)로 처리한다.** 설정은 `next.config.ts`의 `turbopack.rules`에 있고, `postcss.config` 파일은 없다.
+- **Clerk 7 (Core 3).** 학습 데이터와 API가 다르다.
+  - `<SignedIn>`, `<SignedOut>`, `<Protect>`는 제거되었다. `<Show when="signed-in">`을 쓴다.
+  - `createRouteMatcher`는 deprecated다. `src/proxy.ts`는 경로를 직접 비교해 1차로 막을 뿐이고, 데이터를 다루는 페이지·API·Server Function은 각자 `auth()`로 `userId`를 다시 확인한다.
+  - 경로를 읽는 Clerk 컴포넌트(`<SignIn>`, `<SignUp>` 등)는 Cache Components 때문에 `<Suspense>`로 감싸야 빌드된다.
+  - UI는 `@clerk/localizations`의 `koKR`로 한국어를 쓴다.
 - 경로 별칭: `@/*` → `src/*`
 - 주요 라이브러리: `@clerk/nextjs` 7, `drizzle-orm` + `@neondatabase/serverless`, `@anthropic-ai/sdk` 1.x, `@modelcontextprotocol/sdk`, `zod` 4, `rss-parser`.
 
