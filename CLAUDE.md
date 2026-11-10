@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 해외 주식 뉴스 RSS를 버튼으로 수집하고, Claude API로 한국어 제목·요약·카테고리 분류를 만들어 카드로 보여 주는 다중 사용자 웹 앱이다. 원하는 뉴스는 사용자의 노션에 저장한다. 요구사항, 데이터 모델, 처리 흐름, 구현 순서, 검증 기준은 모두 `PRD.md`에 있으니 기능 작업 전에 해당 절을 먼저 읽는다. 화면을 만들거나 고칠 때는 `ui.md`(UI 가이드: 색·글꼴 토큰, 레이아웃, 카테고리 탭, 뉴스 카드, 상태 화면, 문구 규칙)를 먼저 읽고 따른다.
 
-현재 상태: PRD 12절 1단계(Clerk)와 2단계(DB 스키마) 완료. 구현은 PRD 12절 순서(Clerk → Drizzle 스키마 → 카테고리 CRUD → RSS·Claude 수집 → 카드 목록 → 노션 OAuth·MCP → Vercel)로 진행한다.
+현재 상태: PRD 12절 1단계(Clerk)와 2단계(DB 스키마) 완료. 4단계 중 RSS 수집·저장만 완료(Claude 번역·분류, 배치 반복은 아직 없음). 구현은 PRD 12절 순서(Clerk → Drizzle 스키마 → 카테고리 CRUD → RSS·Claude 수집 → 카드 목록 → 노션 OAuth·MCP → Vercel)로 진행한다.
 
 ## 명령어
 
@@ -27,7 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `src/db/index.ts`의 `db`는 Neon **HTTP** 드라이버(`drizzle-orm/neon-http`)다. `db.transaction()`은 지원하지 않으니 여러 쿼리는 `db.batch()`로 묶거나 단일 SQL 문으로 처리한다. `server-only`라 서버 코드에서만 import한다.
 - `casing: "snake_case"`가 `drizzle.config.ts`와 `src/db/index.ts` 양쪽에 있다. 스키마에는 컬럼 이름을 적지 않고 camelCase 필드만 쓴다.
 - `userId` 컬럼은 Clerk 사용자 ID이며 FK가 없다. `user_articles.categoryId`는 `ON DELETE SET NULL`이라 카테고리를 삭제하면 미분류가 된다. 다만 FK는 카테고리 소유자를 검사하지 않으므로, 분류를 저장할 때 같은 사용자의 카테고리인지 코드에서 확인한다.
-- `articles`에는 번역에 성공한 기사만 넣는다. 그래서 `titleKo`와 `summaryKo`는 NOT NULL이다.
+- `articles`에는 수집 때 원문만 넣고 `titleKo`·`summaryKo`는 null로 둔다(마이그레이션 0001). null은 '아직 번역 안 됨'이며, Claude 단계가 이 기사들을 골라 채운다. 카드는 번역이 없으면 임시로 원문 제목과 원문 설명(`originalDescription`)을 보여 준다. 원문을 `summaryKo`에 넣지 않는다.
 - `notion_connections`는 사용자당 한 행이다. `clientId`는 토큰보다 먼저 저장되고, 연결이 끊겨도 토큰 컬럼만 null로 지운다.
 
 ## 스택과 설정상 주의점
@@ -59,12 +59,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | 출처 | 피드 URL |
 |---|---|
-| Bloomberg Markets | `https://feeds.bloomberg.com/markets/news.rss` |
-| Reuters (Google News 경유) | `https://news.google.com/rss/search?q=when:24h+site:reuters.com&ceid=US:en&hl=en-US&gl=US` |
+| Bloomberg Markets | `https://feeds.bloomberg.com/markets/news.rss` (bloomberg.com/feeds/...로 리디렉션) |
+| WSJ Markets | `https://feeds.content.dowjones.io/public/rss/RSSMarketsMain` (예전 `feeds.a.dj.com`은 2025-01 이후 갱신 중단) |
+| Investing.com Stock Market News | `https://www.investing.com/rss/news_25.rss` |
 
+- 피드 목록은 `src/lib/news/feeds.ts`, 읽기·파싱은 `src/lib/news/fetch-feeds.ts`, 저장은 `src/db/queries.ts`의 `saveFetchedArticles`, 버튼은 `src/app/dashboard/`의 `fetchNews` Server Function과 `FetchNewsToolbar`다.
+- 수집 범위는 발행 후 24시간 이내다. 발행 시각·링크·제목이 없는 기사는 건너뛴다.
+- 중복 판정 키는 `normalizeUrl`(fetch-feeds.ts)로 정규화한 URL이다. https로 통일하고 `#` 이후, 추적 파라미터(`utm_*`, WSJ의 `mod` 등), 경로 끝 `/`를 지우며 남은 파라미터는 정렬한다. 한 번의 수집 안에서도, DB(`articles.url` 유니크·`ON CONFLICT DO NOTHING`)에서도 이 키로 중복을 막는다. 규칙을 바꾸면 기존 행의 키와 어긋나 중복이 생길 수 있으니 기존 URL에 적용해 보고 바꾼다.
+- Investing.com은 설명이 없고 `pubDate`가 시간대 없이(`2026-11-10 13:44:35`, UTC) 와서 `naiveDateIsUtc`로 처리한다.
 - 기사 본문은 스크래핑하지 않는다. RSS의 제목과 설명만 요약한다.
-- Reuters는 공식 RSS가 없어서 Google News를 경유한다. 이 피드의 링크는 Google 리디렉션 URL이라 중복 판정 키(`articles.url`)로 쓸 때 주의한다. 설명이 빈약할 수 있다.
-- Google News 피드는 개인적·비상업적 용도로만 허용된다(PRD 11절 미결 사항). 공개 운영 전에 소스를 결정해야 하므로, 피드를 설정 파일만 바꿔 교체할 수 있게 유지한다.
+- WSJ·Investing.com 피드의 상업적 이용 조건은 공개 운영 전에 확인한다(PRD 11절).
 
 ## 화면과 라우트
 
@@ -75,7 +79,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `/categories` | 카테고리 추가·이름 수정·삭제 |
 | `/api/notion/connect`, `/api/notion/callback` | 노션 OAuth 시작과 콜백 |
 
-- 뉴스 카드에는 한국어 제목, 한국어 요약, 출처(Bloomberg/Reuters), 발행 시각, 카테고리, 원문 링크, 'notion 저장' 버튼을 넣는다. 이미 저장한 카드는 '저장됨'으로 표시한다.
+- 뉴스 카드에는 한국어 제목, 한국어 요약, 출처(Bloomberg/WSJ/Investing.com), 발행 시각, 카테고리, 원문 링크, 'notion 저장' 버튼을 넣는다. 이미 저장한 카드는 '저장됨'으로 표시한다.
 - 노션 페이지에는 제목, 요약, 출처, 원문 링크, 카테고리를 넣는다. 부모를 지정하지 않으므로 개인 페이지로 생성된다.
 
 ## 범위 밖 (구현하지 않음)

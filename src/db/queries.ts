@@ -1,7 +1,62 @@
 import "server-only";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "./index";
-import { articles, categories, userArticles } from "./schema";
+import {
+  articles,
+  categories,
+  userArticles,
+  type NewArticle,
+} from "./schema";
+
+type FetchedArticle = Pick<
+  NewArticle,
+  "url" | "source" | "originalTitle" | "originalDescription" | "publishedAt"
+>;
+
+/**
+ * 피드에서 읽은 기사를 저장하고 이 사용자의 목록에 연결한다.
+ * - articles는 공용이라 URL이 이미 있으면 그대로 두고(다른 사용자가 수집했거나 번역까지 끝났을 수 있다) 새 URL만 넣는다.
+ * - 이미 있던 기사도 이 사용자의 user_articles에 없으면 연결한다. 분류 전이라 categoryId는 null(미분류)이다.
+ * 두 문장을 한 batch로 보내 함께 성공하거나 함께 실패한다.
+ */
+export async function saveFetchedArticles(
+  userId: string,
+  items: FetchedArticle[],
+) {
+  if (items.length === 0) return { added: 0, linked: 0 };
+
+  const urls = items.map((item) => item.url);
+
+  const [added, linked] = await db.batch([
+    db
+      .insert(articles)
+      .values(items)
+      .onConflictDoNothing({ target: articles.url })
+      .returning({ id: articles.id }),
+    // insert ... select는 테이블의 모든 컬럼을 정의 순서대로 골라야 한다.
+    db
+      .insert(userArticles)
+      .select(
+        db
+          .select({
+            id: sql`gen_random_uuid()`.as("id"),
+            userId: sql`${userId}`.as("user_id"),
+            articleId: articles.id,
+            categoryId: sql`null::uuid`.as("category_id"),
+            notionPageId: sql`null::text`.as("notion_page_id"),
+            createdAt: sql`now()`.as("created_at"),
+          })
+          .from(articles)
+          .where(inArray(articles.url, urls)),
+      )
+      .onConflictDoNothing({
+        target: [userArticles.userId, userArticles.articleId],
+      })
+      .returning({ id: userArticles.id }),
+  ]);
+
+  return { added: added.length, linked: linked.length };
+}
 
 export type NewsItem = Awaited<ReturnType<typeof getUserNews>>[number];
 
@@ -16,6 +71,8 @@ export async function getUserNews(userId: string) {
       id: articles.id,
       url: articles.url,
       source: articles.source,
+      originalTitle: articles.originalTitle,
+      originalDescription: articles.originalDescription,
       titleKo: articles.titleKo,
       summaryKo: articles.summaryKo,
       publishedAt: articles.publishedAt,

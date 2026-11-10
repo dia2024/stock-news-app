@@ -15,8 +15,8 @@ const createdAt = () =>
 
 /**
  * 기사 원문과 번역. 모든 사용자가 공유한다.
- * 번역·요약은 기사당 한 번만 한다. 번역에 성공한 기사만 저장하고,
- * 실패한 기사는 저장하지 않아 다음 수집 때 다시 시도된다.
+ * 수집 때는 원문만 저장하고, 번역·요약은 기사당 한 번만 해서 titleKo·summaryKo를 채운다.
+ * titleKo가 null이면 아직 번역하지 않은 기사이며, 번역에 실패하면 null로 남아 다음에 다시 시도된다.
  */
 export const articles = pgTable(
   "articles",
@@ -24,12 +24,13 @@ export const articles = pgTable(
     id: uuid().primaryKey().defaultRandom(),
     // 중복 판정 키
     url: text().notNull().unique(),
-    // 피드 설정의 출처 이름(예: Bloomberg, Reuters). 피드 목록이 설정 파일로 바뀔 수 있어 enum으로 두지 않는다.
+    // 피드 설정의 출처 이름(예: Bloomberg, WSJ). 피드 목록이 설정 파일로 바뀔 수 있어 enum으로 두지 않는다.
     source: text().notNull(),
     originalTitle: text().notNull(),
     originalDescription: text(),
-    titleKo: text().notNull(),
-    summaryKo: text().notNull(),
+    // null = 아직 번역하지 않음
+    titleKo: text(),
+    summaryKo: text(),
     publishedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
   },

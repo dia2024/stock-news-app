@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { AppHeader } from "@/components/app-header";
 import { NewsCard } from "@/components/news-card";
 import { getUserNews } from "@/db/queries";
+import { FetchNewsToolbar } from "./fetch-news-toolbar";
 
 export const metadata: Metadata = {
   title: "대시보드 | Stock 뉴스 수집기",
@@ -15,7 +16,8 @@ export default function DashboardPage() {
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <AppHeader />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
-        <h1 className="text-xl font-semibold">최신 뉴스</h1>
+        <h1 className="sr-only">최신 뉴스</h1>
+        <FetchNewsToolbar />
         <Suspense fallback={<NewsGridSkeleton />}>
           <NewsGrid />
         </Suspense>
@@ -38,7 +40,7 @@ async function NewsGrid() {
           아직 가져온 뉴스가 없습니다.
         </p>
         <p className="break-keep text-sm text-zinc-500">
-          ‘뉴스 가져오기’ 버튼을 눌러 최신 해외 증시 뉴스를 받아 보세요.
+          위의 ‘뉴스 가져오기’ 버튼을 눌러 최신 해외 증시 뉴스를 받아 보세요.
         </p>
       </div>
     );

@@ -31,6 +31,7 @@ function formatPublished(date: Date, now: number) {
 
 export function NewsCard({ item, now }: { item: NewsItem; now: number }) {
   const date = item.publishedAt ?? item.createdAt;
+  const summary = item.summaryKo ?? item.originalDescription;
 
   return (
     <li>
@@ -56,13 +57,22 @@ export function NewsCard({ item, now }: { item: NewsItem; now: number }) {
           </time>
         </div>
 
-        <h2 className="break-keep text-base font-semibold leading-snug text-zinc-900 dark:text-zinc-100">
-          {item.titleKo}
+        {/* 번역 전(titleKo·summaryKo가 null)에는 임시로 원문 제목과 원문 설명을 보여 준다. */}
+        <h2
+          lang={item.titleKo ? undefined : "en"}
+          className="break-keep text-base font-semibold leading-snug text-zinc-900 dark:text-zinc-100"
+        >
+          {item.titleKo ?? item.originalTitle}
         </h2>
 
-        <p className="line-clamp-4 break-keep text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-          {item.summaryKo}
-        </p>
+        {summary && (
+          <p
+            lang={item.summaryKo ? undefined : "en"}
+            className="line-clamp-4 break-keep text-sm leading-relaxed text-zinc-600 dark:text-zinc-400"
+          >
+            {summary}
+          </p>
+        )}
 
         <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-3 dark:border-zinc-800">
           <a

@@ -44,7 +44,7 @@
 카드에는 다음을 표시한다.
 - 한국어 제목
 - 한국어 요약
-- 출처(Bloomberg, Reuters)와 발행 시각
+- 출처(Bloomberg, WSJ, Investing.com)와 발행 시각
 - 카테고리
 - 원문 링크
 - 'notion 저장' 버튼
@@ -57,17 +57,18 @@
 
 ## 3. 뉴스 소스
 
-사용자가 지정한 사이트는 Bloomberg 뉴스레터 페이지(https://www.bloomberg.com/newsletters)와 Reuters(https://www.reuters.com/)이다. 두 주소 모두 RSS 피드가 아닌 일반 웹페이지이므로 아래 피드를 대신 쓴다. 피드 목록은 설정 파일로 분리해 쉽게 바꿀 수 있게 한다.
+소스는 Bloomberg, The Wall Street Journal, Investing.com이다(2026-11-10 결정, 처음 계획한 Reuters/Google News 경유 피드는 쓰지 않는다). 피드 목록은 설정 파일(`src/lib/news/feeds.ts`)로 분리해 쉽게 바꿀 수 있게 한다. '뉴스 가져오기'는 발행 후 24시간 이내 기사만 가져온다.
 
-| 출처 | 피드 URL | 확인 결과 (2026-11-03) |
+| 출처 | 피드 URL | 확인 결과 (2026-11-10) |
 |---|---|---|
-| Bloomberg Markets | `https://feeds.bloomberg.com/markets/news.rss` | 정상 응답. 항목마다 제목과 짧은 설명이 있음 |
-| Reuters (Google News 경유) | `https://news.google.com/rss/search?q=when:24h+site:reuters.com&ceid=US:en&hl=en-US&gl=US` | 정상 응답. Reuters는 2020년 6월 공식 RSS를 중단함 |
+| Bloomberg Markets | `https://feeds.bloomberg.com/markets/news.rss` | 301로 `bloomberg.com/feeds/markets/news.rss`로 이동 후 정상. 약 20건, 제목과 짧은 설명 |
+| WSJ Markets | `https://feeds.content.dowjones.io/public/rss/RSSMarketsMain` | 정상. 약 60건(24시간 이내는 일부), 설명 있음. 예전 `feeds.a.dj.com`은 2025년 1월 이후 갱신 중단 |
+| Investing.com Stock Market News | `https://www.investing.com/rss/news_25.rss` | 정상. 10건, **설명 없음**, `pubDate`가 시간대 없는 UTC 값 |
 
 ### 소스 관련 제약
-- 본문은 스크래핑하지 않는다. RSS의 제목과 설명만 요약하므로 요약이 짧을 수 있다.
-- Google News 피드는 링크가 Google을 거쳐 가고 설명이 빈약할 수 있다.
-- **Google News 피드 약관:** 피드에 "개인적·비상업적 피드 리더 용도로만 사용 가능하며 그 외 사용은 금지된다"는 문구가 있다. 여러 사용자가 쓰는 서비스로 운영하면 이 조건에 걸릴 수 있다. 공개 전에 이 피드를 계속 쓸지, 라이선스를 받은 다른 소스로 바꿀지 결정해야 한다.
+- 본문은 스크래핑하지 않는다. RSS의 제목과 설명만 요약하므로 요약이 짧을 수 있다. Investing.com은 제목만으로 요약하게 된다.
+- WSJ 링크에는 `?mod=rss_markets_main` 같은 추적 파라미터가 붙어 있어, 중복 판정 전에 지운다.
+- **피드 약관:** WSJ·Investing.com 피드를 여러 사용자가 쓰는 서비스에서 써도 되는지 공개 전에 확인해야 한다.
 
 ## 4. 기술 스택
 
@@ -95,6 +96,7 @@
 | `notion_connections` | 사용자별 | userId, clientId, accessToken(암호화), refreshToken(암호화), expiresAt, workspaceName, createdAt, updatedAt |
 
 - 번역·요약은 기사당 한 번만 해서 모든 사용자가 공유한다.
+- 수집 때는 원문만 저장하고 `titleKo`·`summaryKo`는 null로 둔다. null은 '아직 번역 안 됨'이며, 번역에 실패한 기사도 null로 남아 다음에 다시 시도된다.
 - 분류는 사용자마다 자기 카테고리 기준으로 따로 한다.
 - 카테고리를 삭제하면 `user_articles.categoryId`를 null로 바꾼다.
 
@@ -165,8 +167,8 @@
 - 노션 저장 위치(특정 페이지나 데이터베이스) 선택. 1차 버전은 개인 페이지로 저장한다.
 
 ## 11. 위험과 미결 사항
-1. **Google News 피드 약관:** 비상업적 개인 용도로만 허용된다. 공개 운영 전에 결정이 필요하다.
-2. **뉴스 재배포 저작권:** 여러 사용자에게 번역·요약본을 보여 주는 것이 Bloomberg와 Reuters 약관에 걸릴 수 있어 공개 전에 검토해야 한다.
+1. **피드 약관:** WSJ·Investing.com RSS의 상업적·다중 사용자 이용 조건을 공개 운영 전에 확인해야 한다.
+2. **뉴스 재배포 저작권:** 여러 사용자에게 번역·요약본을 보여 주는 것이 Bloomberg, WSJ, Investing.com 약관에 걸릴 수 있어 공개 전에 검토해야 한다.
 3. **노션 MCP 재인증:** refresh token 만료(최대 180일) 때문에 사용자가 주기적으로 다시 연결해야 할 수 있다.
 4. **요약 품질:** RSS 설명만으로 요약하므로 내용이 얕을 수 있다.
 
@@ -190,4 +192,5 @@
 ## 14. 현재 진행 상황
 - Next.js 16 프로젝트 생성 완료
 - 필요한 패키지 설치 완료: Clerk, Drizzle, Neon, Anthropic SDK, MCP SDK, Zod, rss-parser
-- 앱 코드는 아직 작성하지 않음
+- 1단계(Clerk), 2단계(DB 스키마) 완료
+- 4단계 중 RSS 수집 완료(2026-11-10): '뉴스 가져오기'로 3개 피드의 24시간 이내 기사를 원문 그대로 저장하고 사용자 목록에 미분류로 연결한다. Claude 번역·분류와 배치 반복·진행률은 아직 없음
