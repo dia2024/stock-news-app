@@ -1,0 +1,299 @@
+# UI 가이드: Stock 뉴스 수집기
+
+이 문서는 화면을 만들 때 따르는 스타일 규칙이다. 기능 요구사항은 `PRD.md` 2절과 7절에 있고, 이 문서는 그 화면을 **어떻게 보이게 할지**만 정한다.
+
+스타일은 Tailwind CSS 4 유틸리티 클래스로만 작성한다. 별도 CSS 파일이나 인라인 `style`은 쓰지 않는다. 공통 값은 `src/app/globals.css`의 `@theme`에 토큰으로 둔다.
+
+## 1. 원칙
+
+- **읽기가 먼저다.** 화면의 주인공은 한국어 제목과 요약이다. 장식, 그림자, 색은 최소로 쓰고, 여백과 글자 크기로 위계를 만든다.
+- **색은 의미가 있을 때만 쓴다.** 기본은 흑백(zinc) 계열이다. 강조색(indigo)은 주요 동작과 선택 상태에만, 초록·빨강·노랑은 성공·오류·경고에만 쓴다.
+- **한 화면에 주요 버튼은 하나다.** 대시보드에서는 '뉴스 가져오기'만 채워진(primary) 버튼이다. 나머지는 테두리 버튼이나 텍스트 버튼이다.
+- **라이트·다크 모드를 모두 지원한다.** 시스템 설정을 따르며, 색 클래스를 쓸 때는 `dark:` 짝을 함께 쓴다.
+
+## 2. 디자인 토큰
+
+### 색
+
+| 용도 | 라이트 | 다크 |
+|---|---|---|
+| 페이지 배경 | `bg-zinc-50` | `dark:bg-zinc-950` |
+| 카드·헤더 배경 | `bg-white` | `dark:bg-zinc-900` |
+| 테두리 | `border-zinc-200` | `dark:border-zinc-800` |
+| 본문 글자 | `text-zinc-900` | `dark:text-zinc-100` |
+| 보조 글자(요약) | `text-zinc-600` | `dark:text-zinc-400` |
+| 메타 글자(출처·시각) | `text-zinc-500` | `dark:text-zinc-500` |
+| 강조(주요 버튼, 선택 탭) | `bg-indigo-600`, `text-indigo-600` | `dark:bg-indigo-500`, `dark:text-indigo-400` |
+| 성공(저장됨, 연결됨) | `text-emerald-600` | `dark:text-emerald-400` |
+| 오류(수집 실패, 연결 만료) | `text-red-600`, `bg-red-50` | `dark:text-red-400`, `dark:bg-red-950/40` |
+| 경고(재연결 안내) | `text-amber-700`, `bg-amber-50` | `dark:text-amber-300`, `dark:bg-amber-950/40` |
+
+`globals.css`의 `--background`, `--foreground`는 위 페이지 배경·본문 글자 값(`zinc-50`/`zinc-950`, `zinc-900`/`zinc-100`)과 맞춘다.
+
+### 글꼴
+
+- 한글 가독성을 위해 본문 글꼴은 `Noto Sans KR`(`next/font/google`)을 쓰고, 영문·숫자는 기존 Geist를 앞에 둔다. `--font-sans`를 `var(--font-geist-sans), var(--font-noto-sans-kr), sans-serif` 순서로 정의한다.
+- 현재 `globals.css`의 `body { font-family: Arial ... }`는 `--font-sans`를 덮어쓰므로 지운다.
+- 한국어는 `break-keep`을 기본으로 써서 단어 중간에서 줄이 바뀌지 않게 한다.
+
+| 용도 | 클래스 |
+|---|---|
+| 앱 이름(헤더) | `text-lg font-semibold tracking-tight` |
+| 페이지 제목 | `text-xl font-semibold` |
+| 카드 제목 | `text-base font-semibold leading-snug` |
+| 카드 요약·본문 | `text-sm leading-relaxed` |
+| 메타 정보·배지 | `text-xs` |
+| 숫자(진행률, 시각) | `tabular-nums` 추가 |
+
+### 간격·모양
+
+- 기본 간격 단위는 4px(Tailwind `1`)이다. 요소 사이 간격은 `gap-2`(8px), `gap-4`(16px), `gap-6`(24px) 세 가지를 주로 쓴다.
+- 모서리: 카드·패널 `rounded-xl`, 버튼·입력 `rounded-lg`, 탭·배지 `rounded-full`.
+- 그림자: 카드에 `shadow-sm`만 쓴다. 호버 때도 그림자를 키우지 않고 테두리 색만 바꾼다.
+- 본문 최대 폭: `max-w-6xl mx-auto px-4 sm:px-6`.
+
+## 3. 대시보드 레이아웃 (`/`)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ Stock 뉴스 수집기                   카테고리 관리  (사용자) │  ← 헤더
+├──────────────────────────────────────────────────────────┤
+│ [뉴스 가져오기]  ▓▓▓▓▓░░░ 12/20 처리 중   ● 노션 연결됨   │  ← 수집 툴바
+│                                                          │
+│ (전체) 시장 동향  기업 실적  경제 지표  연준·금리  기술주 │
+│ 미분류  [+ 카테고리]                                     │  ← 카테고리 탭
+│                                                          │
+│ ┌────────────┐ ┌────────────┐ ┌────────────┐             │
+│ │ 뉴스 카드  │ │ 뉴스 카드  │ │ 뉴스 카드  │             │  ← 카드 그리드
+│ └────────────┘ └────────────┘ └────────────┘             │
+└──────────────────────────────────────────────────────────┘
+```
+
+위에서 아래로 헤더 → 수집 툴바 → 카테고리 탭 → 카드 그리드 순서다. 툴바와 탭 사이, 탭과 그리드 사이는 `gap-6`으로 띄운다.
+
+```tsx
+<div className="min-h-full bg-zinc-50 dark:bg-zinc-950">
+  <Header />
+  <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
+    <CollectToolbar />
+    <CategoryTabs />
+    <NewsGrid />
+  </main>
+</div>
+```
+
+## 4. 헤더
+
+- 왼쪽에 앱 이름 'Stock 뉴스 수집기', 오른쪽에 '카테고리 관리' 링크와 Clerk `<UserButton />`을 둔다.
+- 스크롤해도 보이도록 상단에 고정한다.
+
+```tsx
+<header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/80">
+  <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+    <Link href="/" className="text-lg font-semibold tracking-tight">Stock 뉴스 수집기</Link>
+    <nav className="flex items-center gap-4 text-sm">
+      <Link href="/categories" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">카테고리 관리</Link>
+      <UserButton />
+    </nav>
+  </div>
+</header>
+```
+
+`layout.tsx`의 `metadata.title`도 'Stock 뉴스 수집기'로 맞춘다.
+
+## 5. 수집 툴바
+
+'뉴스 가져오기' 버튼, 진행률, 노션 연결 상태를 한 줄에 둔다. 좁은 화면에서는 줄바꿈된다(`flex-wrap`).
+
+### 뉴스 가져오기 버튼 (primary)
+
+```tsx
+<button className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400">
+  뉴스 가져오기
+</button>
+```
+
+- 수집 중에는 `disabled`로 두고 문구를 '가져오는 중…'으로 바꾼다. 앞에 작은 스피너(`size-4 animate-spin`)를 붙인다.
+
+### 진행률
+
+수집이 진행 중일 때만 보인다. 배치 응답의 처리 건수와 남은 건수로 계산한다.
+
+```tsx
+<div className="flex min-w-48 flex-1 items-center gap-3">
+  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+       role="progressbar" aria-valuenow={done} aria-valuemax={total}>
+    <div className="h-full rounded-full bg-indigo-600 transition-all dark:bg-indigo-500" style={{ width: `${pct}%` }} />
+  </div>
+  <span className="text-xs tabular-nums text-zinc-500">{done}/{total}</span>
+</div>
+```
+
+진행 막대의 폭만 예외로 `style`을 쓴다.
+
+- 끝나면 막대를 감추고 결과를 한 줄로 알린다. 예: '새 뉴스 8건을 가져왔습니다.'(`text-sm text-zinc-600`)
+- 실패한 피드가 있으면 툴바 아래에 오류 알림을 둔다(9절 참고). 예: 'Reuters 피드를 읽지 못했습니다. 나머지 뉴스는 정상적으로 가져왔습니다.'
+
+### 노션 연결 상태
+
+툴바 오른쪽 끝(`ml-auto`)에 점과 글자로 표시한다.
+
+| 상태 | 표시 |
+|---|---|
+| 연결됨 | `size-2 rounded-full bg-emerald-500` 점 + '노션 연결됨'(`text-xs text-zinc-600`) |
+| 연결 안 됨 | 회색 점(`bg-zinc-400`) + '노션 연결하기' 테두리 버튼 |
+| 만료됨 | 노란 점(`bg-amber-500`) + '노션 다시 연결' 테두리 버튼, 툴바 아래에 경고 알림 |
+
+테두리 버튼(secondary):
+
+```tsx
+<a href="/api/notion/connect" className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800">
+  노션 연결하기
+</a>
+```
+
+## 6. 카테고리 탭
+
+뉴스 카드 목록 바로 위에 둔다. 순서는 **전체 → 사용자 카테고리(생성순) → 미분류 → [+ 카테고리]** 이다. 추가 버튼은 항상 맨 끝에 있다.
+
+- 탭은 `?category=<id>` 검색 파라미터를 바꾸는 `<Link>`다. 전체는 파라미터 없음, 미분류는 `?category=none`.
+- 현재 탭에 `aria-current="page"`를 넣고, 그 값으로 선택 스타일을 준다.
+- 각 탭 옆에 기사 수를 작게 표시해도 된다(`text-xs tabular-nums opacity-70`).
+- 좁은 화면에서는 줄바꿈하지 않고 가로로 스크롤한다.
+
+```tsx
+<nav aria-label="카테고리" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+  <ul className="flex w-max items-center gap-2">
+    <li>
+      <Link
+        href="/"
+        aria-current={selected === null ? "page" : undefined}
+        className="inline-flex h-8 items-center whitespace-nowrap rounded-full border border-zinc-200 bg-white px-3.5 text-sm text-zinc-700 hover:border-zinc-300 hover:text-zinc-900 aria-[current=page]:border-indigo-600 aria-[current=page]:bg-indigo-600 aria-[current=page]:text-white dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:aria-[current=page]:border-indigo-500 dark:aria-[current=page]:bg-indigo-500"
+      >
+        전체
+      </Link>
+    </li>
+    {/* 각 카테고리, 미분류도 같은 스타일 */}
+    <li>
+      <AddCategoryButton />
+    </li>
+  </ul>
+</nav>
+```
+
+### 카테고리 추가 버튼
+
+다른 탭과 구분되도록 점선 테두리와 `+` 아이콘을 쓴다.
+
+```tsx
+<button className="inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-zinc-300 px-3.5 text-sm text-zinc-500 hover:border-indigo-400 hover:text-indigo-600 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-indigo-400 dark:hover:text-indigo-400">
+  <PlusIcon className="size-4" aria-hidden /> 카테고리
+</button>
+```
+
+- 누르면 버튼 자리가 같은 높이의 입력칸으로 바뀐다(`h-8 w-40 rounded-full border px-3.5 text-sm`). 자동으로 포커스한다.
+- Enter로 추가, Esc나 빈 값으로 포커스를 잃으면 취소한다. 추가에 성공하면 새 탭이 '미분류' 앞에 생긴다.
+- 이름이 비었거나 이미 있는 이름이면 입력칸 아래에 `text-xs text-red-600`으로 이유를 보여 준다.
+- 이름 수정과 삭제는 대시보드에서 하지 않고 `/categories`에서 한다.
+
+## 7. 뉴스 카드
+
+### 그리드
+
+```tsx
+<ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+```
+
+최신 발행 시각 순서로 정렬한다.
+
+### 카드 구조
+
+위에서 아래로 **메타 줄 → 제목 → 요약 → 하단 동작 줄**이다. 하단 동작 줄은 `mt-auto`로 카드 바닥에 붙여, 요약 길이가 달라도 버튼 위치가 맞게 한다.
+
+```tsx
+<li>
+  <article className="flex h-full flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-colors hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
+    {/* 메타 줄 */}
+    <div className="flex items-center gap-2 text-xs text-zinc-500">
+      <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{categoryName ?? "미분류"}</span>
+      <span>{source}</span>
+      <span aria-hidden>·</span>
+      <time dateTime={publishedAt.toISOString()} className="tabular-nums">{formatted}</time>
+    </div>
+
+    {/* 제목 */}
+    <h2 className="break-keep text-base font-semibold leading-snug text-zinc-900 dark:text-zinc-100">{titleKo}</h2>
+
+    {/* 요약 */}
+    <p className="line-clamp-4 break-keep text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{summaryKo}</p>
+
+    {/* 하단 동작 줄 */}
+    <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-3 dark:border-zinc-800">
+      <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400">
+        원문 보기 ↗
+      </a>
+      <NotionSaveButton />
+    </div>
+  </article>
+</li>
+```
+
+### 카드 세부 규칙
+
+- **카테고리 배지:** 모든 카테고리가 같은 회색 배지를 쓴다. 카테고리마다 색을 다르게 하지 않는다. 미분류는 테두리만 있는 배지(`border border-dashed border-zinc-300 bg-transparent`)로 구분한다.
+- **출처:** 'Bloomberg', 'Reuters'처럼 글자로만 표시한다. 로고는 쓰지 않는다.
+- **발행 시각:** 24시간 이내는 상대 시각('3시간 전'), 그보다 오래되면 'MM월 DD일 HH:mm'(한국 시간)으로 표시한다. `<time>`의 `title` 속성에 전체 날짜를 넣는다.
+- **제목:** 줄 수를 자르지 않는다. 요약만 `line-clamp-4`로 자른다.
+- **원문 링크:** 항상 새 탭으로 연다.
+
+### notion 저장 버튼
+
+| 상태 | 모양 |
+|---|---|
+| 기본 | 작은 테두리 버튼 'notion 저장'(`rounded-lg border px-3 py-1.5 text-xs font-medium`, 5절 secondary 스타일) |
+| 저장 중 | `disabled`, 문구 '저장 중…', 스피너 |
+| 저장됨 | 버튼이 아니라 글자: 체크 아이콘 + '저장됨'(`text-xs font-medium text-emerald-600 dark:text-emerald-400`) |
+| 노션 미연결·만료 | `disabled`, `title`로 '먼저 노션을 연결하세요' 안내 |
+| 실패 | 기본 상태로 돌아가고 버튼 아래에 `text-xs text-red-600`으로 짧은 오류 문구 |
+
+## 8. 카테고리 관리 화면 (`/categories`)
+
+- 헤더 아래에 페이지 제목 '카테고리 관리'와 한 줄 설명('카테고리를 삭제하면 그 카테고리의 뉴스는 미분류로 바뀝니다.')을 둔다.
+- 본문 폭은 대시보드보다 좁게 `max-w-2xl`로 한다.
+- 맨 위에 추가 폼(입력칸 + primary '추가' 버튼)을 둔다.
+- 목록은 하나의 카드 안에 행으로 나열한다(`divide-y divide-zinc-200 rounded-xl border bg-white`). 각 행은 `flex items-center justify-between px-4 py-3`이다.
+- 행 오른쪽에 '수정'과 '삭제' 텍스트 버튼을 둔다. '삭제'는 `text-red-600`이고, 누르면 확인 대화상자('“기술주” 카테고리를 삭제할까요? 이 카테고리의 뉴스 N건은 미분류가 됩니다.')를 띄운다.
+- '수정'을 누르면 그 행의 이름이 입력칸으로 바뀌고 '저장'·'취소' 버튼이 나온다.
+
+## 9. 상태 화면
+
+| 상황 | 표시 |
+|---|---|
+| 기사가 하나도 없음 | 그리드 자리에 가운데 정렬 안내: '아직 가져온 뉴스가 없습니다.' + '뉴스 가져오기' 버튼을 누르라는 보조 문구 |
+| 선택한 카테고리에 기사 없음 | '이 카테고리에 분류된 뉴스가 없습니다.' |
+| 첫 로딩 | 카드와 같은 크기의 회색 블록 6개(`animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-800 h-56`) |
+| 오류·경고 알림 | 툴바 아래 한 줄 박스(`rounded-lg px-4 py-3 text-sm`, 2절의 오류·경고 색). 닫기 버튼을 둔다. |
+
+빈 상태 박스:
+
+```tsx
+<div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-zinc-300 px-6 py-16 text-center dark:border-zinc-700">
+  <p className="font-medium text-zinc-900 dark:text-zinc-100">아직 가져온 뉴스가 없습니다.</p>
+  <p className="text-sm text-zinc-500">위의 ‘뉴스 가져오기’ 버튼을 눌러 최신 해외 증시 뉴스를 받아 보세요.</p>
+</div>
+```
+
+## 10. 접근성
+
+- 모든 버튼과 링크에 키보드 포커스 표시를 둔다: `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600`.
+- 아이콘만 있는 버튼에는 `aria-label`을 넣는다. 장식용 아이콘은 `aria-hidden`.
+- 진행률은 `role="progressbar"`와 `aria-valuenow`/`aria-valuemax`를 쓰고, 수집 결과 문구는 `aria-live="polite"` 영역에 넣는다.
+- 글자와 배경의 명도 대비는 4.5:1 이상을 지킨다. `zinc-400`보다 옅은 색은 본문 글자에 쓰지 않는다.
+- 터치 대상은 최소 32px 높이(`h-8`)로 한다.
+
+## 11. 문구 규칙
+
+- 버튼 문구는 동사로 끝낸다: '뉴스 가져오기', '노션 연결하기', '추가'.
+- 안내 문구는 '~합니다/~습니다' 체로 짧게 쓴다.
+- 'Notion' 대신 '노션'으로 쓴다. 단, 카드 버튼은 PRD대로 'notion 저장'으로 표시한다.
+- 숫자와 단위 사이는 띄우지 않는다: '8건', '3시간 전'.
