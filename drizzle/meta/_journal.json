@@ -15,6 +15,20 @@
       "when": 1794319326406,
       "tag": "0001_nullable_translation",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794492896019,
+      "tag": "0002_classified_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794494971300,
+      "tag": "0003_user_profiles",
+      "breakpoints": true
     }
   ]
 }

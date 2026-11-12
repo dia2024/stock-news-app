@@ -15,6 +15,7 @@ import {
   articles,
   categories,
   userArticles,
+  userProfiles,
   type NewArticle,
 } from "../src/db/schema";
 
@@ -34,6 +35,7 @@ const db = drizzle({
   casing: "snake_case",
 });
 
+// src/db/queries.ts의 DEFAULT_CATEGORIES와 같게 유지한다(그 파일은 server-only라 import할 수 없다).
 const DEFAULT_CATEGORIES = [
   "시장 동향",
   "기업 실적",
@@ -132,7 +134,9 @@ const SAMPLES: Sample[] = [
 ];
 
 async function main() {
-  // 1. 카테고리와 기사 넣기. 이미 있으면 건너뛴다.
+  // 1. 처음 온 기록, 카테고리와 기사 넣기. 이미 있으면 건너뛴다.
+  // 처음 온 기록이 있어야 앱이 기본 카테고리를 다시 만들지 않는다(ensureDefaultCategories).
+  await db.insert(userProfiles).values({ userId }).onConflictDoNothing();
   await db
     .insert(categories)
     .values(DEFAULT_CATEGORIES.map((name) => ({ userId, name })))
@@ -175,6 +179,8 @@ async function main() {
         articleId: articleId.get(s.article.url)!,
         categoryId: s.category ? categoryId.get(s.category)! : null,
         notionPageId: s.notionPageId,
+        // 예제 기사는 번역·분류가 끝난 상태로 넣어 Claude로 보내지 않는다.
+        classifiedAt: new Date(),
       })),
     )
     .onConflictDoNothing();

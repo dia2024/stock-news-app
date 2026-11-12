@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 해외 주식 뉴스 RSS를 버튼으로 수집하고, Claude API로 한국어 제목·요약·카테고리 분류를 만들어 카드로 보여 주는 다중 사용자 웹 앱이다. 원하는 뉴스는 사용자의 노션에 저장한다. 요구사항, 데이터 모델, 처리 흐름, 구현 순서, 검증 기준은 모두 `PRD.md`에 있으니 기능 작업 전에 해당 절을 먼저 읽는다. 화면을 만들거나 고칠 때는 `ui.md`(UI 가이드: 색·글꼴 토큰, 레이아웃, 카테고리 탭, 뉴스 카드, 상태 화면, 문구 규칙)를 먼저 읽고 따른다.
 
-현재 상태: PRD 12절 1단계(Clerk)와 2단계(DB 스키마) 완료. 4단계 중 RSS 수집·저장만 완료(Claude 번역·분류, 배치 반복은 아직 없음). 구현은 PRD 12절 순서(Clerk → Drizzle 스키마 → 카테고리 CRUD → RSS·Claude 수집 → 카드 목록 → 노션 OAuth·MCP → Vercel)로 진행한다.
+현재 상태: PRD 12절 1~4단계 완료(Clerk, DB 스키마, 카테고리 CRUD·기본 카테고리, RSS 수집과 Claude 번역·요약·분류 배치). 5단계 중 카드 목록·카테고리 탭 필터·페이지 나누기도 완료. 다음은 6단계(노션 OAuth·MCP)다. 구현은 PRD 12절 순서(Clerk → Drizzle 스키마 → 카테고리 CRUD → RSS·Claude 수집 → 카드 목록 → 노션 OAuth·MCP → Vercel)로 진행한다.
 
 ## 명령어
 
@@ -28,6 +28,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `casing: "snake_case"`가 `drizzle.config.ts`와 `src/db/index.ts` 양쪽에 있다. 스키마에는 컬럼 이름을 적지 않고 camelCase 필드만 쓴다.
 - `userId` 컬럼은 Clerk 사용자 ID이며 FK가 없다. `user_articles.categoryId`는 `ON DELETE SET NULL`이라 카테고리를 삭제하면 미분류가 된다. 다만 FK는 카테고리 소유자를 검사하지 않으므로, 분류를 저장할 때 같은 사용자의 카테고리인지 코드에서 확인한다.
 - `articles`에는 수집 때 원문만 넣고 `titleKo`·`summaryKo`는 null로 둔다(마이그레이션 0001). null은 '아직 번역 안 됨'이며, Claude 단계가 이 기사들을 골라 채운다. 카드는 번역이 없으면 임시로 원문 제목과 원문 설명(`originalDescription`)을 보여 준다. 원문을 `summaryKo`에 넣지 않는다.
+- `user_articles.classifiedAt`이 null이면 아직 Claude 분류 전이다(마이그레이션 0002). `categoryId = null`만으로는 '미분류'와 '처리 전'을 구분할 수 없어서 둔 컬럼이다. 처리 대상 선택은 이 컬럼으로 한다.
+- Claude 처리는 `src/lib/ai/process-article.ts`(`translateAndClassify`, `classifyOnly`), 배치는 `src/app/dashboard/actions.ts`의 `processNewsBatch`다. 실패한 기사는 클라이언트가 `skipIds`로 넘겨 같은 실행에서 다시 고르지 않는다.
+- `user_profiles`는 사용자가 처음 온 기록이다. `ensureDefaultCategories`는 이 행을 처음 넣은 요청에서만 기본 카테고리를 만들므로, 사용자가 카테고리를 모두 지워도 다시 생기지 않는다. 대시보드·`/categories` 진입과 `fetchNews` 시작 때 부른다.
+- 카테고리 이름 '미분류'·'전체'는 예약어라 쓸 수 없다('미분류'는 Claude 분류에서 '맞는 카테고리 없음'을 뜻한다). 카테고리를 추가·수정해도 이미 분류된 기사는 다시 분류하지 않는다.
 - `notion_connections`는 사용자당 한 행이다. `clientId`는 토큰보다 먼저 저장되고, 연결이 끊겨도 토큰 컬럼만 null로 지운다.
 
 ## 스택과 설정상 주의점

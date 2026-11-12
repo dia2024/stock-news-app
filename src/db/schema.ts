@@ -64,6 +64,9 @@ export const userArticles = pgTable(
     }),
     // 노션에 저장한 페이지 ID. 값이 있으면 '저장됨'이고 다시 저장하지 않는다.
     notionPageId: text(),
+    // Claude 분류를 마친 시각. null = 아직 분류 전(처리 대상).
+    // categoryId = null만으로는 '미분류'와 '아직 처리 안 함'을 구분할 수 없어 따로 둔다.
+    classifiedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [
@@ -71,6 +74,15 @@ export const userArticles = pgTable(
     index().on(t.userId, t.categoryId),
   ],
 );
+
+/**
+ * 앱을 처음 쓴 사용자 기록. 사용자당 한 행이다.
+ * 이 행을 처음 넣을 때만 기본 카테고리를 만든다. 그래서 사용자가 카테고리를 모두 지워도 다시 생기지 않는다.
+ */
+export const userProfiles = pgTable("user_profiles", {
+  userId: text().primaryKey(),
+  createdAt: createdAt(),
+});
 
 /**
  * 사용자별 노션 OAuth 연결. 사용자당 한 행이다.
