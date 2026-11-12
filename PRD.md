@@ -47,11 +47,12 @@
 - 출처(Bloomberg, WSJ, Investing.com)와 발행 시각
 - 카테고리
 - 원문 링크
-- 'notion 저장' 버튼
+- 'news 저장' 버튼
 
 ### F7. 노션 저장
 - 사용자는 처음 한 번 자기 노션 계정을 연결한다(OAuth).
-- 'notion 저장' 버튼을 누르면 해당 뉴스를 노션 페이지로 만든다. 페이지에는 제목, 요약, 출처, 원문 링크, 카테고리를 넣는다.
+- 'news 저장' 버튼을 누르면 해당 뉴스를 앱이 만든 노션 데이터베이스('해외 주식 뉴스')에 한 행(페이지)으로 추가한다. 속성은 6절 '노션 데이터베이스'를 따른다.
+- 데이터베이스는 사용자가 만들거나 고르지 않는다. 앱이 사용자별로 하나 만들어 쓴다(2026-11-13 결정).
 - 저장된 카드는 '저장됨'으로 표시하고 중복 저장을 막는다.
 - 노션 연결이 만료되면 다시 연결하라고 안내한다.
 
@@ -93,12 +94,13 @@
 | `articles` | 전체 공용 | id, url(유니크), source, originalTitle, originalDescription, titleKo, summaryKo, publishedAt, createdAt |
 | `categories` | 사용자별 | id, userId, name, createdAt (userId+name 유니크) |
 | `user_articles` | 사용자별 | id, userId, articleId, categoryId(null = 미분류), notionPageId, createdAt (userId+articleId 유니크) |
-| `notion_connections` | 사용자별 | userId, clientId, accessToken(암호화), refreshToken(암호화), expiresAt, workspaceName, createdAt, updatedAt |
+| `notion_connections` | 사용자별 | userId, clientId, accessToken(암호화), refreshToken(암호화), expiresAt, workspaceId, workspaceName, connectedAt, databaseId, dataSourceId, refreshLockUntil, databaseLockUntil, createdAt, updatedAt |
 
 - 번역·요약은 기사당 한 번만 해서 모든 사용자가 공유한다.
 - 수집 때는 원문만 저장하고 `titleKo`·`summaryKo`는 null로 둔다. null은 '아직 번역 안 됨'이며, 번역에 실패한 기사도 null로 남아 다음에 다시 시도된다.
 - 분류는 사용자마다 자기 카테고리 기준으로 따로 한다.
 - 카테고리를 삭제하면 `user_articles.categoryId`를 null로 바꾼다.
+- `notion_connections.databaseId`는 앱이 만든 노션 데이터베이스의 ID다. null이면 아직 만들지 않았다는 뜻이다. 연결이 끊겨 토큰을 지워도 `databaseId`는 남겨 두고, 다른 워크스페이스로 다시 연결하면 null로 비운다.
 
 ## 6. 처리 흐름
 
@@ -133,8 +135,27 @@
 
 ### 노션 저장
 1. 서버가 MCP TypeScript SDK의 `StreamableHTTPClientTransport`로 Bearer 토큰을 붙여 접속한다.
-2. `notion-create-pages` 도구를 호출한다. 부모를 지정하지 않으면 개인 페이지로 생성된다.
-3. 반환된 페이지 ID를 `user_articles.notionPageId`에 저장한다.
+2. `notion_connections.databaseId`가 null이면 데이터베이스를 만든다. 부모를 지정하지 않아 개인 페이지 영역에 생기며, 이름과 속성은 아래 표를 따른다. 반환된 ID를 `databaseId`에 저장한다. 같은 사용자가 동시에 여러 건을 저장해도 데이터베이스가 두 개 생기지 않도록 생성은 연결별로 직렬화한다.
+3. 페이지 생성 도구(`notion-create-pages`)로 그 데이터베이스에 행을 추가한다. 페이지 본문에도 요약과 원문 링크를 넣는다.
+4. 반환된 페이지 ID를 `user_articles.notionPageId`에 저장한다.
+5. 데이터베이스가 삭제되었거나 휴지통에 있어 찾을 수 없으면 `databaseId`를 null로 비우고 한 번만 새로 만들어 다시 저장한다.
+
+도구 이름과 입력 형식은 실제 연결 후 MCP 도구 목록(`tools/list`)으로 확인해 확정한다.
+
+### 노션 데이터베이스
+이름은 '해외 주식 뉴스'다. 속성 이름은 코드와 정확히 같아야 하므로 상수 한곳에서 관리한다.
+
+| 속성 | 유형 | 값 |
+|---|---|---|
+| 제목 | Title | 한국어 제목. 번역 전이면 원문 제목 |
+| 요약 | Text | 한국어 요약. 번역 전이면 원문 설명 |
+| 출처 | Select | Bloomberg / WSJ / Investing.com |
+| 카테고리 | Select | 사용자 카테고리 이름 또는 '미분류'. 노션은 없는 선택지를 받지 않으므로, 거부되면 앱이 현재 선택지를 모두 읽어 새 선택지를 더한 뒤(ALTER COLUMN ... SET SELECT) 다시 저장한다. 쉼표는 선택지 이름에 쓸 수 없어 공백으로 바꾼다 |
+| 원문 링크 | URL | 기사 원문 주소 |
+| 발행일 | Date | 기사 발행 시각(시간 포함) |
+| 저장일 | Created time | 노션이 자동으로 채운다 |
+
+- 앱에서 카테고리 이름을 바꿔도 노션의 기존 선택지와 이미 저장한 행은 바꾸지 않는다.
 
 ## 7. 화면 구성
 
@@ -164,7 +185,8 @@
 - 자동·예약 수집
 - 기사 본문 스크래핑
 - 뉴스 검색, 알림, 모바일 앱
-- 노션 저장 위치(특정 페이지나 데이터베이스) 선택. 1차 버전은 개인 페이지로 저장한다.
+- 노션 저장 위치(특정 페이지나 데이터베이스) 선택. 앱이 만든 '해외 주식 뉴스' 데이터베이스에만 저장한다.
+- 사용자가 노션에서 바꾼 데이터베이스 속성(이름 변경·삭제)에 맞추는 일. 속성이 맞지 않아 저장이 실패하면 오류를 보여 준다.
 
 ## 11. 위험과 미결 사항
 1. **피드 약관:** WSJ·Investing.com RSS의 상업적·다중 사용자 이용 조건을 공개 운영 전에 확인해야 한다.
@@ -196,3 +218,5 @@
 - 4단계 중 RSS 수집 완료(2026-11-10): '뉴스 가져오기'로 3개 피드의 24시간 이내 기사를 원문 그대로 저장하고 사용자 목록에 미분류로 연결한다. 
 - 4단계 Claude 처리 완료(2026-11-12): 수집 후 분류 대기 기사를 5건씩 Claude로 번역·요약·분류하고 진행률을 표시한다. 이미 번역된 기사는 분류만 한다. `user_articles.classifiedAt`으로 처리 여부를 구분한다
 - 3단계 카테고리 CRUD 완료(2026-11-12): 첫 방문 때 기본 카테고리 생성(`user_profiles`), `/categories`에서 추가·이름 수정·삭제, 대시보드 탭(전체/카테고리/미분류, `?category=<id>|none`)과 탭의 카테고리 추가 버튼
+- 6단계 코드 작성(2026-11-13): 노션 OAuth(`/api/notion/connect`, `/api/notion/callback`), 토큰 암호화·갱신, 데이터베이스 생성과 'news 저장'. 마이그레이션 0004로 `notion_connections`에 workspaceId, connectedAt, databaseId, dataSourceId, 잠금 컬럼 추가. 실제 노션 계정 검증 전이다.
+- 노션 저장 방식 결정(2026-11-13): 개인 페이지 대신 앱이 만든 '해외 주식 뉴스' 데이터베이스에 저장한다(6절 '노션 데이터베이스'). 카드 버튼 이름은 'news 저장'이다.

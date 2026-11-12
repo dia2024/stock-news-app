@@ -1,4 +1,5 @@
 import type { NewsItem } from "@/db/queries";
+import { NotionSaveButton } from "./notion-save-button";
 
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600";
@@ -29,7 +30,15 @@ function formatPublished(date: Date, now: number) {
   return absoluteFormat.format(date);
 }
 
-export function NewsCard({ item, now }: { item: NewsItem; now: number }) {
+export function NewsCard({
+  item,
+  now,
+  notionConnected,
+}: {
+  item: NewsItem;
+  now: number;
+  notionConnected: boolean;
+}) {
   const date = item.publishedAt ?? item.createdAt;
   const summary = item.summaryKo ?? item.originalDescription;
 
@@ -74,7 +83,7 @@ export function NewsCard({ item, now }: { item: NewsItem; now: number }) {
           </p>
         )}
 
-        <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-3 dark:border-zinc-800">
+        <div className="mt-auto flex items-start justify-between border-t border-zinc-100 pt-3 dark:border-zinc-800">
           <a
             href={item.url}
             target="_blank"
@@ -95,15 +104,7 @@ export function NewsCard({ item, now }: { item: NewsItem; now: number }) {
               저장됨
             </span>
           ) : (
-            // 노션 연동(PRD 12절 6단계) 전까지는 비활성 상태로 둔다.
-            <button
-              type="button"
-              disabled
-              title="노션 저장 기능은 준비 중입니다"
-              className="h-8 rounded-lg border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-            >
-              notion 저장
-            </button>
+            <NotionSaveButton articleId={item.id} connected={notionConnected} />
           )}
         </div>
       </article>

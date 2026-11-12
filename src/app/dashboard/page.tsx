@@ -13,12 +13,17 @@ import {
 } from "@/db/queries";
 import { CategoryTabs, type SelectedCategory } from "./category-tabs";
 import { FetchNewsToolbar } from "./fetch-news-toolbar";
+import {
+  getCachedNotionStatus,
+  NotionNotice,
+  NotionStatusIndicator,
+} from "./notion-status";
 
 export const metadata: Metadata = {
   title: "대시보드 | Stock 뉴스 수집기",
 };
 
-// 이 페이지의 Server Function(fetchNews, processNewsBatch) 실행 시간 상한(초).
+// 이 페이지의 Server Function(fetchNews, processNewsBatch, saveToNotion) 실행 시간 상한(초).
 // processNewsBatch는 Claude 호출 5건을 병렬로 기다린다.
 export const maxDuration = 60;
 
@@ -35,7 +40,16 @@ export default function DashboardPage({
       <AppHeader />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
         <h1 className="sr-only">최신 뉴스</h1>
-        <FetchNewsToolbar />
+        <FetchNewsToolbar
+          notionStatus={
+            <Suspense fallback={null}>
+              <NotionStatusIndicator />
+            </Suspense>
+          }
+        />
+        <Suspense fallback={null}>
+          <NotionNotice result={notionResult(searchParams)} />
+        </Suspense>
         <Suspense fallback={<NewsGridSkeleton />}>
           <NewsGrid searchParams={searchParams} />
         </Suspense>
@@ -68,7 +82,10 @@ async function NewsGrid({
       : selected === "none"
         ? { kind: "none" }
         : { kind: "category", id: selected };
-  const { news, total, now } = await loadNews(userId, page, filter);
+  const [{ news, total, now }, notionStatus] = await Promise.all([
+    loadNews(userId, page, filter),
+    getCachedNotionStatus(userId),
+  ]);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // 없는 페이지(기사가 줄었거나 주소를 직접 고친 경우)는 마지막 페이지로 보낸다.
@@ -88,7 +105,12 @@ async function NewsGrid({
         <>
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {news.map((item) => (
-              <NewsCard key={item.id} item={item} now={now} />
+              <NewsCard
+                key={item.id}
+                item={item}
+                now={now}
+                notionConnected={notionStatus === "connected"}
+              />
             ))}
           </ul>
           <Pagination
@@ -122,6 +144,12 @@ function EmptyState({ hasAnyNews }: { hasAnyNews: boolean }) {
       </p>
     </div>
   );
+}
+
+/** OAuth 콜백이 붙여 보낸 ?notion= 결과 */
+async function notionResult(searchParams: PageProps<"/dashboard">["searchParams"]) {
+  const value = (await searchParams).notion;
+  return Array.isArray(value) ? value[0] : value;
 }
 
 /** ?page=N을 1 이상의 정수로 읽는다. 없거나 잘못된 값이면 1페이지다. */

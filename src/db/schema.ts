@@ -97,6 +97,17 @@ export const notionConnections = pgTable("notion_connections", {
   refreshToken: text(),
   expiresAt: timestamp({ withTimezone: true }),
   workspaceName: text(),
+  // 토큰 응답에 워크스페이스 ID가 있으면 저장한다. 다른 워크스페이스로 재연결했는지 판단하는 데 쓴다.
+  workspaceId: text(),
+  // 처음으로 토큰을 받은 시각. 토큰이 null인데 이 값이 있으면 '연결 만료'(재연결 필요)다.
+  connectedAt: timestamp({ withTimezone: true }),
+  // 앱이 만든 '해외 주식 뉴스' 데이터베이스와 그 데이터 소스. null이면 첫 저장 때 만든다.
+  databaseId: text(),
+  dataSourceId: text(),
+  // 연결별 직렬화용 잠금 만료 시각. Neon HTTP 드라이버는 트랜잭션·세션 잠금을 쓸 수 없어
+  // 조건부 UPDATE로 잠금을 잡고, 프로세스가 죽어도 이 시각이 지나면 풀린다.
+  refreshLockUntil: timestamp({ withTimezone: true }),
+  databaseLockUntil: timestamp({ withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: timestamp({ withTimezone: true })
     .notNull()

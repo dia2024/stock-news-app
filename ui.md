@@ -246,11 +246,11 @@
 - **제목:** 줄 수를 자르지 않는다. 요약만 `line-clamp-4`로 자른다.
 - **원문 링크:** 항상 새 탭으로 연다.
 
-### notion 저장 버튼
+### news 저장 버튼
 
 | 상태 | 모양 |
 |---|---|
-| 기본 | 작은 테두리 버튼 'notion 저장'(`rounded-lg border px-3 py-1.5 text-xs font-medium`, 5절 secondary 스타일) |
+| 기본 | 작은 테두리 버튼 'news 저장'(`rounded-lg border px-3 py-1.5 text-xs font-medium`, 5절 secondary 스타일) |
 | 저장 중 | `disabled`, 문구 '저장 중…', 스피너 |
 | 저장됨 | 버튼이 아니라 글자: 체크 아이콘 + '저장됨'(`text-xs font-medium text-emerald-600 dark:text-emerald-400`) |
 | 노션 미연결·만료 | `disabled`, `title`로 '먼저 노션을 연결하세요' 안내 |
@@ -295,5 +295,5 @@
 
 - 버튼 문구는 동사로 끝낸다: '뉴스 가져오기', '노션 연결하기', '추가'.
 - 안내 문구는 '~합니다/~습니다' 체로 짧게 쓴다.
-- 'Notion' 대신 '노션'으로 쓴다. 단, 카드 버튼은 PRD대로 'notion 저장'으로 표시한다.
+- 'Notion' 대신 '노션'으로 쓴다. 단, 카드 버튼은 PRD대로 'news 저장'으로 표시한다.
 - 숫자와 단위 사이는 띄우지 않는다: '8건', '3시간 전'.

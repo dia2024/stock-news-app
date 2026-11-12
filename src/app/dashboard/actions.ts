@@ -12,7 +12,10 @@ import {
   saveFetchedArticles,
   type PendingArticle,
 } from "@/db/queries";
+import { getArticleForNotion, saveNotionPageId } from "@/db/notion-queries";
 import { classifyOnly, translateAndClassify } from "@/lib/ai/process-article";
+import { NotionAuthRequiredError } from "@/lib/notion/oauth";
+import { saveArticleToNotion } from "@/lib/notion/save-article";
 import { FEEDS } from "@/lib/news/feeds";
 import { fetchRecentFeedItems } from "@/lib/news/fetch-feeds";
 
@@ -160,4 +163,53 @@ async function processArticle(
     translation: { titleKo, summaryKo },
     categoryId: categoryIdByName.get(category) ?? null,
   });
+}
+
+export type SaveToNotionResult =
+  | { ok: true }
+  | {
+      ok: false;
+      error: string;
+      /** true면 노션을 (다시) 연결해야 한다. 화면이 연결 상태를 새로 그린다. */
+      reconnect?: boolean;
+    };
+
+/**
+ * 기사 한 건을 사용자의 노션 데이터베이스에 저장한다(PRD F7).
+ * 이미 저장한 기사는 다시 만들지 않는다. 다른 사용자의 기사 ID면 찾지 못한 것으로 처리한다.
+ */
+export async function saveToNotion(articleId: string): Promise<SaveToNotionResult> {
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "로그인이 필요합니다." };
+  if (!z.uuid().safeParse(articleId).success) {
+    return { ok: false, error: "잘못된 요청입니다." };
+  }
+
+  try {
+    const article = await getArticleForNotion(userId, articleId);
+    if (!article) return { ok: false, error: "뉴스를 찾지 못했습니다." };
+    if (article.notionPageId) {
+      refresh();
+      return { ok: true };
+    }
+
+    const pageId = await saveArticleToNotion(userId, article);
+    await saveNotionPageId(userId, articleId, pageId);
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof NotionAuthRequiredError) {
+      refresh();
+      return {
+        ok: false,
+        reconnect: true,
+        error:
+          error.reason === "expired"
+            ? "노션 연결이 만료되었습니다. 다시 연결해 주세요."
+            : "먼저 노션을 연결하세요.",
+      };
+    }
+    console.error(`[saveToNotion] 노션 저장 실패 ${articleId}`, error);
+    return { ok: false, error: "노션에 저장하지 못했습니다." };
+  }
 }
