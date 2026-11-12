@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "./index";
 import {
   articles,
@@ -58,14 +58,37 @@ export async function saveFetchedArticles(
   return { added: added.length, linked: linked.length };
 }
 
-export type NewsItem = Awaited<ReturnType<typeof getUserNews>>[number];
+export type NewsItem = Awaited<
+  ReturnType<typeof getUserNewsPage>
+>["items"][number];
 
 /**
- * 사용자의 뉴스 목록을 최신 발행순으로 가져온다.
+ * 사용자의 뉴스 목록 중 한 페이지(page는 1부터)와 전체 기사 수를 함께 가져온다.
+ * 두 쿼리를 한 batch로 보내 왕복을 한 번으로 줄인다.
+ */
+export async function getUserNewsPage(
+  userId: string,
+  page: number,
+  pageSize: number,
+) {
+  const [items, [{ total }]] = await db.batch([
+    userNewsQuery(userId)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    db
+      .select({ total: count() })
+      .from(userArticles)
+      .where(eq(userArticles.userId, userId)),
+  ]);
+  return { items, total };
+}
+
+/**
+ * 사용자의 뉴스 목록을 최신 발행순으로 고르는 쿼리.
  * articles는 공용이라 user_articles로 이 사용자의 기사만 고른다.
  * 카테고리는 같은 사용자의 것만 붙이고, 없으면 categoryName이 null(미분류)이다.
  */
-export async function getUserNews(userId: string) {
+function userNewsQuery(userId: string) {
   return db
     .select({
       id: articles.id,
@@ -91,5 +114,11 @@ export async function getUserNews(userId: string) {
     )
     .where(eq(userArticles.userId, userId))
     // 발행 시각이 없는 기사는 뒤로 보내고, 그 안에서는 수집 시각순으로 정렬한다.
-    .orderBy(sql`${articles.publishedAt} desc nulls last`, desc(articles.createdAt));
+    // 마지막 id는 같은 시각의 기사들이 페이지마다 같은 순서로 나오게 하는 기준이다.
+    .orderBy(
+      sql`${articles.publishedAt} desc nulls last`,
+      desc(articles.createdAt),
+      desc(articles.id),
+    )
+    .$dynamic();
 }
