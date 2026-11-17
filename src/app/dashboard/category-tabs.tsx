@@ -12,7 +12,18 @@ type Props = {
   total: number;
   uncategorized: number;
   selected: SelectedCategory;
+  /** 지금 적용된 검색어. 탭을 바꿔도 검색은 유지한다. */
+  query?: string;
 };
+
+/** 탭 링크 주소. 탭을 바꾸면 1페이지부터 보여 주므로 page는 넣지 않는다. */
+function tabHref(category: string | null, query: string) {
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  if (query) params.set("q", query);
+  const qs = params.toString();
+  return qs ? `/dashboard?${qs}` : "/dashboard";
+}
 
 /** 카테고리 탭(ui.md 6절): 전체 → 사용자 카테고리(생성순) → 미분류 → [+ 카테고리] */
 export function CategoryTabs({
@@ -20,6 +31,7 @@ export function CategoryTabs({
   total,
   uncategorized,
   selected,
+  query = "",
 }: Props) {
   return (
     <nav
@@ -27,18 +39,18 @@ export function CategoryTabs({
       className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
     >
       <ul className="flex w-max items-center gap-2">
-        <Tab href="/dashboard" label="전체" count={total} current={selected === null} />
+        <Tab href={tabHref(null, query)} label="전체" count={total} current={selected === null} />
         {categories.map((c) => (
           <Tab
             key={c.id}
-            href={`/dashboard?category=${c.id}`}
+            href={tabHref(c.id, query)}
             label={c.name}
             count={c.articleCount}
             current={selected === c.id}
           />
         ))}
         <Tab
-          href="/dashboard?category=none"
+          href={tabHref("none", query)}
           label="미분류"
           count={uncategorized}
           current={selected === "none"}
