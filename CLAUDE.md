@@ -23,6 +23,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run db:seed -- <Clerk userId>` — 개발용 예제 기사 5건과 기본 카테고리를 넣는다(`scripts/seed.ts`, 재실행해도 중복 없음). 예제 기사 URL은 `https://example.com/sample/`로 시작한다.
 - 스키마는 생성된 마이그레이션 파일로만 바꾼다. 이미 적용된 `drizzle/*.sql`은 고치지 않는다.
 
+## 개발 흐름 (슬래시 명령)
+
+- `/news-workflow [브랜치 이름]` — 새 기능 개발용 명령(`.claude/commands/news-workflow.md`). 순서: main인지 확인(아니면 경고하고 이동할지 묻는다) → main에서 기능 브랜치 생성(이름이 없으면 기능을 묻고 영어 소문자-하이픈 이름을 제안) → '이제 개발을 시작하세요!'와 스택·컨벤션 안내 → 사용자가 '완료'/'done'을 입력하면 변경 파일 목록과 커밋 메시지 제안 → 확인 후 커밋하고 `git merge --no-ff`로 main에 병합 → 작업 요약.
+- 커밋 메시지는 기존 형식(한국어 `영역: 설명` 한 줄 제목)을 따른다. push와 기능 브랜치 삭제는 자동으로 하지 않고 마지막에 묻는다.
+
 ## 데이터베이스
 
 - `src/db/index.ts`의 `db`는 Neon **HTTP** 드라이버(`drizzle-orm/neon-http`)다. `db.transaction()`은 지원하지 않으니 여러 쿼리는 `db.batch()`로 묶거나 단일 SQL 문으로 처리한다. `server-only`라 서버 코드에서만 import한다.
