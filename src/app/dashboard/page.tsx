@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { AppHeader } from "@/components/app-header";
-import { NewsCard } from "@/components/news-card";
+import { NewsCard, NewsCardSkeleton } from "@/components/news-card";
 import { Pagination } from "@/components/pagination";
 import {
   ensureDefaultCategories,
@@ -264,10 +264,7 @@ function NewsGridSkeleton() {
       aria-label="뉴스를 불러오는 중"
     >
       {Array.from({ length: PAGE_SIZE }, (_, i) => (
-        <li
-          key={i}
-          className="h-56 animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-800"
-        />
+        <NewsCardSkeleton key={i} />
       ))}
     </ul>
   );

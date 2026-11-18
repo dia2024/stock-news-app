@@ -271,7 +271,7 @@
 |---|---|
 | 기사가 하나도 없음 | 그리드 자리에 가운데 정렬 안내: '아직 가져온 뉴스가 없습니다.' + '뉴스 가져오기' 버튼을 누르라는 보조 문구 |
 | 선택한 카테고리에 기사 없음 | '이 카테고리에 분류된 뉴스가 없습니다.' |
-| 첫 로딩 | 카드와 같은 크기의 회색 블록 6개(`animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-800 h-56`) |
+| 첫 로딩 | 한 페이지 카드 수(9개)만큼 `NewsCardSkeleton`: 카드와 같은 틀(`rounded-xl border bg-white p-5 min-h-56 animate-pulse`) 안에 메타 줄·제목 2줄·요약 3줄·하단 줄을 회색 막대(`bg-zinc-200 dark:bg-zinc-800`)로 그린다. 목록에 `aria-busy="true"`와 `aria-label="뉴스를 불러오는 중"`을 단다. |
 | 오류·경고 알림 | 툴바 아래 한 줄 박스(`rounded-lg px-4 py-3 text-sm`, 2절의 오류·경고 색). 닫기 버튼을 둔다. |
 
 빈 상태 박스:

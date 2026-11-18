@@ -31,6 +31,40 @@ function formatPublished(date: Date, now: number) {
   return absoluteFormat.format(date);
 }
 
+/** 로딩 중에 NewsCard 자리를 채우는 뼈대. 카드와 같은 틀과 줄 배치를 회색 막대로 그린다. */
+export function NewsCardSkeleton() {
+  const barColor = "bg-zinc-200 dark:bg-zinc-800";
+  const bar = `rounded ${barColor}`;
+  return (
+    <li aria-hidden>
+      <div className="flex h-full min-h-56 animate-pulse flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        {/* 메타 줄: 카테고리 배지 · 출처 · 시각 */}
+        <div className="flex items-center gap-2">
+          <div className={`h-5 w-14 rounded-full ${barColor}`} />
+          <div className={`h-3 w-16 ${bar}`} />
+          <div className={`h-3 w-10 ${bar}`} />
+        </div>
+        {/* 제목 2줄 */}
+        <div className="flex flex-col gap-2">
+          <div className={`h-4 w-full ${bar}`} />
+          <div className={`h-4 w-3/4 ${bar}`} />
+        </div>
+        {/* 요약 3줄 */}
+        <div className="flex flex-col gap-2">
+          <div className={`h-3 w-full ${bar}`} />
+          <div className={`h-3 w-full ${bar}`} />
+          <div className={`h-3 w-2/3 ${bar}`} />
+        </div>
+        {/* 하단 동작 줄: 원문 보기 · news 저장 */}
+        <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-3 dark:border-zinc-800">
+          <div className={`h-3 w-16 ${bar}`} />
+          <div className={`h-8 w-20 rounded-lg ${barColor}`} />
+        </div>
+      </div>
+    </li>
+  );
+}
+
 export function NewsCard({
   item,
   now,
