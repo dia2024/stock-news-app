@@ -5,9 +5,11 @@ import {
   count,
   desc,
   eq,
+  ilike,
   inArray,
   isNull,
   notInArray,
+  or,
   sql,
   type SQL,
 } from "drizzle-orm";
@@ -187,24 +189,56 @@ function categoryWhere(userId: string, filter: CategoryFilter) {
   return mine;
 }
 
+/** LIKE 패턴에서 특수 의미가 있는 \, %, _를 글자 그대로 찾도록 이스케이프한다(Postgres 기본 이스케이프 문자는 \). */
+function escapeLike(term: string) {
+  return term.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/**
+ * 검색어 조건. 공백으로 나눈 단어가 모두(AND) 들어 있는 기사를 고른다.
+ * 각 단어는 한국어 제목·요약과 원문 제목·설명 중 어디에 있어도 된다(대소문자 무시).
+ * 번역 전 기사는 titleKo·summaryKo가 null이라 원문에서만 찾는다.
+ */
+function keywordWhere(terms: string[]) {
+  if (terms.length === 0) return undefined;
+  return and(
+    ...terms.map((term) => {
+      const pattern = `%${escapeLike(term)}%`;
+      return or(
+        ilike(articles.titleKo, pattern),
+        ilike(articles.summaryKo, pattern),
+        ilike(articles.originalTitle, pattern),
+        ilike(articles.originalDescription, pattern),
+      );
+    }),
+  );
+}
+
 /**
  * 사용자의 뉴스 목록 중 한 페이지(page는 1부터)와 조건에 맞는 기사 수를 함께 가져온다.
  * 두 쿼리를 한 batch로 보내 왕복을 한 번으로 줄인다.
  * 미분류(none)에는 아직 분류 전인 기사도 들어간다.
+ * keywords가 있으면 그 단어가 모두 들어 있는 기사만 고른다(keywordWhere).
  */
 export async function getUserNewsPage(
   userId: string,
   page: number,
   pageSize: number,
   filter: CategoryFilter = { kind: "all" },
+  keywords: string[] = [],
 ) {
-  const where = categoryWhere(userId, filter);
+  const where = and(categoryWhere(userId, filter), keywordWhere(keywords));
   const [items, [{ total }]] = await db.batch([
     userNewsQuery(userId)
       .where(where)
       .limit(pageSize)
       .offset((page - 1) * pageSize),
-    db.select({ total: count() }).from(userArticles).where(where),
+    // 검색 조건이 articles 컬럼을 보므로 개수 쿼리도 articles를 붙인다.
+    db
+      .select({ total: count() })
+      .from(userArticles)
+      .innerJoin(articles, eq(userArticles.articleId, articles.id))
+      .where(where),
   ]);
   return { items, total };
 }
