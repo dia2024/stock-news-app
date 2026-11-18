@@ -10,11 +10,14 @@ type Progress = { done: number; total: number };
 
 /**
  * 수집 툴바(ui.md 5절): '뉴스 가져오기' 버튼, 진행률, 결과 문구, 노션 연결 상태, 실패 알림
- * notionStatus는 서버 컴포넌트(사용자별 조회)라 페이지에서 Suspense로 감싸 넘겨받는다.
+ * newsCount(뉴스 총 개수 배지)와 notionStatus는 서버 컴포넌트(사용자별 조회)라
+ * 페이지에서 Suspense로 감싸 넘겨받는다.
  */
 export function FetchNewsToolbar({
+  newsCount,
   notionStatus,
 }: {
+  newsCount?: React.ReactNode;
   notionStatus?: React.ReactNode;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -99,6 +102,7 @@ export function FetchNewsToolbar({
           {isPending && <Spinner />}
           {isPending ? "가져오는 중…" : "뉴스 가져오기"}
         </button>
+        {newsCount}
         {progress && <ProgressBar {...progress} />}
         <p aria-live="polite" className="text-sm text-zinc-600 dark:text-zinc-400">
           {status}
