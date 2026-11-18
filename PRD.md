@@ -48,6 +48,7 @@
 - 카테고리
 - 원문 링크
 - 'news 저장' 버튼
+- 오른쪽 위 X(삭제) 버튼(F9)
 
 ### F7. 노션 저장
 - 사용자는 처음 한 번 자기 노션 계정을 연결한다(OAuth).
@@ -55,6 +56,17 @@
 - 데이터베이스는 사용자가 만들거나 고르지 않는다. 앱이 사용자별로 하나 만들어 쓴다(2026-11-13 결정).
 - 저장된 카드는 '저장됨'으로 표시하고 중복 저장을 막는다.
 - 노션 연결이 만료되면 다시 연결하라고 안내한다.
+
+### F8. 키워드 검색
+- 대시보드의 검색창에 단어를 넣으면 그 단어가 들어 있는 뉴스만 보여 준다. 검색어는 `?q=`로 주소에 남는다.
+- 공백으로 나눈 단어가 모두 들어 있어야 한다(AND, 대소문자 무시). 한국어 제목·요약과 원문 제목·설명에서 찾는다.
+- 선택한 카테고리 탭 안에서 검색하며, 검색하면 1페이지부터 보여 준다.
+- 기사 본문은 스크래핑하지 않으므로 본문 내용으로는 찾지 않는다.
+
+### F9. 뉴스 삭제
+- 카드의 X 버튼을 누르면 그 뉴스를 내 목록에서 지우고 화면에서 없앤다.
+- 공용 기사와 번역은 남기므로 다른 사용자의 목록에는 영향이 없다.
+- 지운 뉴스는 다시 수집해도 목록에 돌아오지 않고, 카테고리 개수·분류·검색·노션 저장 대상에서도 빠진다.
 
 ## 3. 뉴스 소스
 
@@ -93,13 +105,14 @@
 |---|---|---|
 | `articles` | 전체 공용 | id, url(유니크), source, originalTitle, originalDescription, titleKo, summaryKo, publishedAt, createdAt |
 | `categories` | 사용자별 | id, userId, name, createdAt (userId+name 유니크) |
-| `user_articles` | 사용자별 | id, userId, articleId, categoryId(null = 미분류), notionPageId, createdAt (userId+articleId 유니크) |
+| `user_articles` | 사용자별 | id, userId, articleId, categoryId(null = 미분류), notionPageId, classifiedAt, createdAt, deletedAt (userId+articleId 유니크) |
 | `notion_connections` | 사용자별 | userId, clientId, accessToken(암호화), refreshToken(암호화), expiresAt, workspaceId, workspaceName, connectedAt, databaseId, dataSourceId, refreshLockUntil, databaseLockUntil, createdAt, updatedAt |
 
 - 번역·요약은 기사당 한 번만 해서 모든 사용자가 공유한다.
 - 수집 때는 원문만 저장하고 `titleKo`·`summaryKo`는 null로 둔다. null은 '아직 번역 안 됨'이며, 번역에 실패한 기사도 null로 남아 다음에 다시 시도된다.
 - 분류는 사용자마다 자기 카테고리 기준으로 따로 한다.
 - 카테고리를 삭제하면 `user_articles.categoryId`를 null로 바꾼다.
+- 사용자가 뉴스를 지우면(F9) `user_articles` 행을 지우지 않고 `deletedAt`만 채운다. 행을 지우면 다음 수집 때 같은 기사가 다시 연결되기 때문이다. `deletedAt`이 있는 행은 모든 조회에서 뺀다.
 - `notion_connections.databaseId`는 앱이 만든 노션 데이터베이스의 ID다. null이면 아직 만들지 않았다는 뜻이다. 연결이 끊겨 토큰을 지워도 `databaseId`는 남겨 두고, 다른 워크스페이스로 다시 연결하면 null로 비운다.
 
 ## 6. 처리 흐름
@@ -162,7 +175,7 @@
 | 경로 | 내용 |
 |---|---|
 | `/sign-in`, `/sign-up` | Clerk 로그인·회원가입 |
-| `/` | 상단: '뉴스 가져오기' 버튼, 진행률, 노션 연결 상태. 카테고리 탭(전체/각 카테고리/미분류). 뉴스 카드 그리드 |
+| `/` | 상단: '뉴스 가져오기' 버튼, 진행률, 노션 연결 상태. 키워드 검색창. 카테고리 탭(전체/각 카테고리/미분류). 뉴스 카드 그리드 |
 | `/categories` | 카테고리 목록과 추가·수정·삭제 |
 | `/api/notion/connect`, `/api/notion/callback` | 노션 OAuth 시작과 콜백 |
 
@@ -184,7 +197,7 @@
 ## 10. 범위 밖
 - 자동·예약 수집
 - 기사 본문 스크래핑
-- 뉴스 검색, 알림, 모바일 앱
+- 알림, 모바일 앱
 - 노션 저장 위치(특정 페이지나 데이터베이스) 선택. 앱이 만든 '해외 주식 뉴스' 데이터베이스에만 저장한다.
 - 사용자가 노션에서 바꾼 데이터베이스 속성(이름 변경·삭제)에 맞추는 일. 속성이 맞지 않아 저장이 실패하면 오류를 보여 준다.
 
@@ -220,3 +233,4 @@
 - 3단계 카테고리 CRUD 완료(2026-11-12): 첫 방문 때 기본 카테고리 생성(`user_profiles`), `/categories`에서 추가·이름 수정·삭제, 대시보드 탭(전체/카테고리/미분류, `?category=<id>|none`)과 탭의 카테고리 추가 버튼
 - 6단계 코드 작성(2026-11-13): 노션 OAuth(`/api/notion/connect`, `/api/notion/callback`), 토큰 암호화·갱신, 데이터베이스 생성과 'news 저장'. 마이그레이션 0004로 `notion_connections`에 workspaceId, connectedAt, databaseId, dataSourceId, 잠금 컬럼 추가. 실제 노션 계정 검증 전이다.
 - 노션 저장 방식 결정(2026-11-13): 개인 페이지 대신 앱이 만든 '해외 주식 뉴스' 데이터베이스에 저장한다(6절 '노션 데이터베이스'). 카드 버튼 이름은 'news 저장'이다.
+- 범위 추가 결정(2026-11-18): 키워드 검색(F8)과 뉴스 삭제(F9)를 범위에 넣었다. 뉴스 삭제는 마이그레이션 0005로 `user_articles.deletedAt`을 추가했고 브라우저에서 동작을 확인했다. 키워드 검색은 빌드만 확인했다.
