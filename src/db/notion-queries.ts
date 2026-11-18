@@ -185,7 +185,11 @@ export async function getArticleForNotion(userId: string, articleId: string) {
       ),
     )
     .where(
-      and(eq(userArticles.userId, userId), eq(userArticles.articleId, articleId)),
+      and(
+        eq(userArticles.userId, userId),
+        eq(userArticles.articleId, articleId),
+        isNull(userArticles.deletedAt),
+      ),
     )
     .limit(1);
   return row;

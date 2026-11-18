@@ -5,6 +5,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import {
   countPendingArticles,
+  deleteUserArticle,
   ensureDefaultCategories,
   getPendingArticles,
   getUserCategories,
@@ -211,5 +212,30 @@ export async function saveToNotion(articleId: string): Promise<SaveToNotionResul
     }
     console.error(`[saveToNotion] 노션 저장 실패 ${articleId}`, error);
     return { ok: false, error: "노션에 저장하지 못했습니다." };
+  }
+}
+
+export type DeleteNewsResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * 카드의 X 버튼으로 기사 한 건을 이 사용자의 목록에서 지운다.
+ * 공용 기사와 번역은 남고, 다음 수집 때도 다시 나타나지 않는다(deleteUserArticle 참고).
+ */
+export async function deleteNews(articleId: string): Promise<DeleteNewsResult> {
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "로그인이 필요합니다." };
+  if (!z.uuid().safeParse(articleId).success) {
+    return { ok: false, error: "잘못된 요청입니다." };
+  }
+
+  try {
+    // 이미 지운 기사(두 번 누름·다른 탭)면 false지만, 화면만 새로 그리면 되므로 성공으로 본다.
+    // 다른 사용자의 기사 ID면 userId 조건 때문에 아무것도 바뀌지 않는다.
+    await deleteUserArticle(userId, articleId);
+    refresh();
+    return { ok: true };
+  } catch (error) {
+    console.error(`[deleteNews] 뉴스 삭제 실패 ${articleId}`, error);
+    return { ok: false, error: "뉴스를 삭제하지 못했습니다." };
   }
 }

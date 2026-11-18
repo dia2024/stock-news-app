@@ -1,4 +1,5 @@
 import type { NewsItem } from "@/db/queries";
+import { DeleteNewsButton } from "./delete-news-button";
 import { NotionSaveButton } from "./notion-save-button";
 
 const FOCUS_RING =
@@ -44,8 +45,14 @@ export function NewsCard({
 
   return (
     <li>
-      <article className="flex h-full flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-colors hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+      {/* relative: 오른쪽 위 X 버튼의 기준. 지우는 중(data-deleting)에는 카드를 흐리게 한다. */}
+      <article className="relative flex h-full flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-[border-color,opacity] hover:border-zinc-300 has-[[data-deleting]]:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
+        <DeleteNewsButton
+          articleId={item.id}
+          title={item.titleKo ?? item.originalTitle}
+        />
+        {/* pr-8: X 버튼과 겹치지 않게 비워 둔다. */}
+        <div className="flex flex-wrap items-center gap-2 pr-8 text-xs text-zinc-500">
           {item.categoryName ? (
             <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
               {item.categoryName}
