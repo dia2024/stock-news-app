@@ -57,9 +57,10 @@ export async function saveFetchedArticles(
             categoryId: sql`null::uuid`.as("category_id"),
             notionPageId: sql`null::text`.as("notion_page_id"),
             // 분류 전이라 null이다. processNewsBatch가 Claude로 분류하고 채운다.
-            // 순서는 schema.ts의 컬럼 정의 순서(notionPageId → classifiedAt → createdAt)와 같아야 한다.
+            // 순서는 schema.ts의 컬럼 정의 순서(notionPageId → classifiedAt → createdAt → deletedAt)와 같아야 한다.
             classifiedAt: sql`null::timestamptz`.as("classified_at"),
             createdAt: sql`now()`.as("created_at"),
+            deletedAt: sql`null::timestamptz`.as("deleted_at"),
           })
           .from(articles)
           .where(inArray(articles.url, urls)),
@@ -87,6 +88,7 @@ function pendingWhere(userId: string, skipIds: string[]): SQL | undefined {
   return and(
     eq(userArticles.userId, userId),
     isNull(userArticles.classifiedAt),
+    isNull(userArticles.deletedAt),
     skipIds.length > 0 ? notInArray(userArticles.articleId, skipIds) : undefined,
   );
 }
@@ -174,7 +176,10 @@ export type CategoryFilter =
   | { kind: "category"; id: string };
 
 function categoryWhere(userId: string, filter: CategoryFilter) {
-  const mine = eq(userArticles.userId, userId);
+  const mine = and(
+    eq(userArticles.userId, userId),
+    isNull(userArticles.deletedAt),
+  );
   if (filter.kind === "none") return and(mine, isNull(userArticles.categoryId));
   if (filter.kind === "category") {
     return and(mine, eq(userArticles.categoryId, filter.id));
@@ -258,6 +263,7 @@ export async function getCategoriesWithCounts(userId: string) {
         and(
           eq(userArticles.categoryId, categories.id),
           eq(userArticles.userId, userId),
+          isNull(userArticles.deletedAt),
         ),
       )
       .where(eq(categories.userId, userId))
@@ -269,9 +275,31 @@ export async function getCategoriesWithCounts(userId: string) {
         uncategorized: sql<number>`count(*) filter (where ${userArticles.categoryId} is null)`.mapWith(Number),
       })
       .from(userArticles)
-      .where(eq(userArticles.userId, userId)),
+      .where(
+        and(eq(userArticles.userId, userId), isNull(userArticles.deletedAt)),
+      ),
   ]);
   return { categories: rows, total, uncategorized };
+}
+
+/**
+ * 사용자의 목록에서 기사 한 건을 지운다. 공용 articles 행은 다른 사용자도 쓰므로 그대로 둔다.
+ * user_articles 행을 지우면 다음 수집 때 같은 기사가 다시 연결되므로, 행은 남기고 deletedAt만 채운다.
+ * 이 사용자의 기사이고 아직 지우지 않았을 때만 바뀌며, 지웠으면 true다.
+ */
+export async function deleteUserArticle(userId: string, articleId: string) {
+  const deleted = await db
+    .update(userArticles)
+    .set({ deletedAt: sql`now()` })
+    .where(
+      and(
+        eq(userArticles.userId, userId),
+        eq(userArticles.articleId, articleId),
+        isNull(userArticles.deletedAt),
+      ),
+    )
+    .returning({ id: userArticles.id });
+  return deleted.length > 0;
 }
 
 /** 같은 사용자에게 이 이름의 카테고리가 있는지(excludeId는 이름을 바꾸는 카테고리 자신) */

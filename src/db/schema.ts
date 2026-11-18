@@ -68,6 +68,9 @@ export const userArticles = pgTable(
     // categoryId = null만으로는 '미분류'와 '아직 처리 안 함'을 구분할 수 없어 따로 둔다.
     classifiedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
+    // 사용자가 카드의 X 버튼으로 지운 시각. 값이 있으면 목록·개수·분류 대상에서 뺀다.
+    // 행을 지우지 않고 남겨 두어야 다음 수집 때 saveFetchedArticles가 같은 기사를 다시 연결하지 않는다.
+    deletedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
     unique().on(t.userId, t.articleId),
