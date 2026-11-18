@@ -35,6 +35,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `userId` 컬럼은 Clerk 사용자 ID이며 FK가 없다. `user_articles.categoryId`는 `ON DELETE SET NULL`이라 카테고리를 삭제하면 미분류가 된다. 다만 FK는 카테고리 소유자를 검사하지 않으므로, 분류를 저장할 때 같은 사용자의 카테고리인지 코드에서 확인한다.
 - `articles`에는 수집 때 원문만 넣고 `titleKo`·`summaryKo`는 null로 둔다(마이그레이션 0001). null은 '아직 번역 안 됨'이며, Claude 단계가 이 기사들을 골라 채운다. 카드는 번역이 없으면 임시로 원문 제목과 원문 설명(`originalDescription`)을 보여 준다. 원문을 `summaryKo`에 넣지 않는다.
 - `user_articles.classifiedAt`이 null이면 아직 Claude 분류 전이다(마이그레이션 0002). `categoryId = null`만으로는 '미분류'와 '처리 전'을 구분할 수 없어서 둔 컬럼이다. 처리 대상 선택은 이 컬럼으로 한다.
+- `user_articles.deletedAt`이 null이 아니면 사용자가 카드의 X 버튼으로 지운 기사다(마이그레이션 0005, `deleteUserArticle`). 행을 실제로 지우면 다음 수집 때 `saveFetchedArticles`가 같은 기사를 다시 연결하므로 행은 남기고 이 값만 채운다. 공용 `articles` 행은 지우지 않는다. `user_articles`를 읽는 새 조회(목록·개수·분류 대기·노션 저장 등)에는 반드시 `isNull(userArticles.deletedAt)` 조건을 넣는다.
 - Claude 처리는 `src/lib/ai/process-article.ts`(`translateAndClassify`, `classifyOnly`), 배치는 `src/app/dashboard/actions.ts`의 `processNewsBatch`다. 실패한 기사는 클라이언트가 `skipIds`로 넘겨 같은 실행에서 다시 고르지 않는다.
 - `user_profiles`는 사용자가 처음 온 기록이다. `ensureDefaultCategories`는 이 행을 처음 넣은 요청에서만 기본 카테고리를 만들므로, 사용자가 카테고리를 모두 지워도 다시 생기지 않는다. 대시보드·`/categories` 진입과 `fetchNews` 시작 때 부른다.
 - 카테고리 이름 '미분류'·'전체'는 예약어라 쓸 수 없다('미분류'는 Claude 분류에서 '맞는 카테고리 없음'을 뜻한다). 카테고리를 추가·수정해도 이미 분류된 기사는 다시 분류하지 않는다.
@@ -86,16 +87,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 경로 | 내용 |
 |---|---|
 | `/sign-in`, `/sign-up` | Clerk 로그인·회원가입. 이 두 경로를 뺀 모든 경로는 `proxy.ts`에서 로그인을 요구한다. |
-| `/` | '뉴스 가져오기' 버튼, 진행률, 노션 연결 상태, 카테고리 탭(전체 / 각 카테고리 / 미분류), 뉴스 카드 그리드 |
+| `/` | '뉴스 가져오기' 버튼, 진행률, 노션 연결 상태, 키워드 검색창, 카테고리 탭(전체 / 각 카테고리 / 미분류), 뉴스 카드 그리드 |
 | `/categories` | 카테고리 추가·이름 수정·삭제 |
 | `/api/notion/connect`, `/api/notion/callback` | 노션 OAuth 시작과 콜백 |
 
-- 뉴스 카드에는 한국어 제목, 한국어 요약, 출처(Bloomberg/WSJ/Investing.com), 발행 시각, 카테고리, 원문 링크, 'news 저장' 버튼을 넣는다. 이미 저장한 카드는 '저장됨'으로 표시한다.
+- 뉴스 카드에는 한국어 제목, 한국어 요약, 출처(Bloomberg/WSJ/Investing.com), 발행 시각, 카테고리, 원문 링크, 'news 저장' 버튼, 오른쪽 위 X(삭제) 버튼을 넣는다.
+- 키워드 검색: `src/app/dashboard/news-search.tsx`의 검색창이 `?q=`로 제출한다(카테고리 탭은 유지, 1페이지부터). 공백으로 나눈 단어가 모두 들어 있는 기사만 고르며(AND, 대소문자 무시), 한국어 제목·요약과 원문 제목·설명에서 찾는다. 조건은 `src/db/queries.ts`의 `keywordWhere`로, `categoryWhere`(사용자·삭제 조건)에 덧붙여 쓴다. 이미 저장한 카드는 '저장됨'으로 표시한다.
 - 노션 데이터베이스 속성: 제목(Title), 요약(Text), 출처(Select), 카테고리(Select), 원문 링크(URL), 발행일(Date), 저장일(Created time). 속성 이름은 코드 상수와 정확히 같아야 한다(PRD 6절 '노션 데이터베이스'). 데이터베이스는 부모 없이 개인 페이지 영역에 만든다.
 
 ## 범위 밖 (구현하지 않음)
 
-자동·예약 수집, 기사 본문 스크래핑, 뉴스 검색, 알림, 모바일 앱, 노션 저장 위치 선택.
+자동·예약 수집, 기사 본문 스크래핑, 알림, 모바일 앱, 노션 저장 위치 선택.
 
 ## 완료 검증 기준 (PRD 13절)
 
