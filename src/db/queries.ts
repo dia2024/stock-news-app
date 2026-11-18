@@ -316,6 +316,17 @@ export async function getCategoriesWithCounts(userId: string) {
   return { categories: rows, total, uncategorized };
 }
 
+/** 사용자 목록에 있는 기사 수(지운 기사 제외). 카테고리·검색 조건과 상관없는 전체 개수다. */
+export async function countUserNews(userId: string) {
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(userArticles)
+    .where(
+      and(eq(userArticles.userId, userId), isNull(userArticles.deletedAt)),
+    );
+  return total;
+}
+
 /**
  * 사용자의 목록에서 기사 한 건을 지운다. 공용 articles 행은 다른 사용자도 쓰므로 그대로 둔다.
  * user_articles 행을 지우면 다음 수집 때 같은 기사가 다시 연결되므로, 행은 남기고 deletedAt만 채운다.

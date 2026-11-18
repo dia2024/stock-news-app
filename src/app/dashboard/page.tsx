@@ -13,6 +13,7 @@ import {
 } from "@/db/queries";
 import { CategoryTabs, type SelectedCategory } from "./category-tabs";
 import { FetchNewsToolbar } from "./fetch-news-toolbar";
+import { NewsCountBadge, NewsCountBadgeSkeleton } from "./news-count-badge";
 import { NewsSearch, SearchSummary } from "./news-search";
 import {
   getCachedNotionStatus,
@@ -46,6 +47,11 @@ export default function DashboardPage({
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
         <h1 className="sr-only">최신 뉴스</h1>
         <FetchNewsToolbar
+          newsCount={
+            <Suspense fallback={<NewsCountBadgeSkeleton />}>
+              <NewsCountBadge />
+            </Suspense>
+          }
           notionStatus={
             <Suspense fallback={null}>
               <NotionStatusIndicator />
