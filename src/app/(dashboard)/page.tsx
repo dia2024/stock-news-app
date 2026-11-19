@@ -40,7 +40,7 @@ const MAX_KEYWORDS = 5;
 // searchParams는 요청 때만 알 수 있으므로 Suspense 안의 NewsGrid에서 기다린다.
 export default function DashboardPage({
   searchParams,
-}: PageProps<"/dashboard">) {
+}: PageProps<"/">) {
   return (
     <div className="flex min-h-full flex-1 flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <AppHeader />
@@ -71,7 +71,7 @@ export default function DashboardPage({
 
 async function NewsGrid({
   searchParams,
-}: Pick<PageProps<"/dashboard">, "searchParams">) {
+}: Pick<PageProps<"/">, "searchParams">) {
   // proxy.ts의 검사와 별개로 데이터를 읽기 전에 사용자를 다시 확인한다.
   const { userId, redirectToSignIn } = await auth();
   if (!userId) return redirectToSignIn();
@@ -193,7 +193,7 @@ function SearchEmptyState({ query }: { query: string }) {
 }
 
 /** OAuth 콜백이 붙여 보낸 ?notion= 결과 */
-async function notionResult(searchParams: PageProps<"/dashboard">["searchParams"]) {
+async function notionResult(searchParams: PageProps<"/">["searchParams"]) {
   const value = (await searchParams).notion;
   return Array.isArray(value) ? value[0] : value;
 }
@@ -229,14 +229,14 @@ function parseCategory(
   return userCategories.some((c) => c.id === raw) ? raw : undefined;
 }
 
-/** 전체·1페이지·검색 없음은 파라미터 없이 /dashboard로 둔다. 탭을 바꾸면 1페이지부터 보여 준다. */
+/** 전체·1페이지·검색 없음은 파라미터 없이 /로 둔다. 탭을 바꾸면 1페이지부터 보여 준다. */
 function pageHref(category: SelectedCategory, page: number, query: string) {
   const params = new URLSearchParams();
   if (category) params.set("category", category);
   if (query) params.set("q", query);
   if (page > 1) params.set("page", String(page));
   const qs = params.toString();
-  return qs ? `/dashboard?${qs}` : "/dashboard";
+  return qs ? `/?${qs}` : "/";
 }
 
 // 상대 시각('3시간 전')의 기준은 목록을 조회한 시각이다. 렌더 중에 Date.now()를 부르지 않도록 여기서 함께 잡는다.

@@ -40,6 +40,6 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("[notion/connect] 노션 연결 시작 실패", error);
-    return NextResponse.redirect(new URL("/dashboard?notion=error", request.url));
+    return NextResponse.redirect(new URL("/?notion=error", request.url));
   }
 }

@@ -13,13 +13,13 @@ type Props = {
 };
 
 /**
- * 뉴스 키워드 검색. '검색' 버튼이나 Enter로 제출하면 /dashboard?q=…로 이동한다(GET, 클라이언트 내비게이션).
+ * 뉴스 키워드 검색. '검색' 버튼이나 Enter로 제출하면 /?q=…로 이동한다(GET, 클라이언트 내비게이션).
  * 페이지 번호는 넣지 않으므로 검색하면 1페이지부터 보여 준다.
  * 주요(primary) 버튼은 '뉴스 가져오기' 하나뿐이라 '검색'은 테두리 버튼이다(ui.md 1절).
  */
 export function NewsSearch({ query, category }: Props) {
   return (
-    <Form action="/dashboard" role="search" className="flex w-full gap-2 sm:max-w-md">
+    <Form action="/" role="search" className="flex w-full gap-2 sm:max-w-md">
       {category ? <input type="hidden" name="category" value={category} /> : null}
       <label htmlFor="news-search" className="sr-only">
         뉴스 검색어

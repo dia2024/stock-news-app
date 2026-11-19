@@ -36,7 +36,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `articles`에는 수집 때 원문만 넣고 `titleKo`·`summaryKo`는 null로 둔다(마이그레이션 0001). null은 '아직 번역 안 됨'이며, Claude 단계가 이 기사들을 골라 채운다. 카드는 번역이 없으면 임시로 원문 제목과 원문 설명(`originalDescription`)을 보여 준다. 원문을 `summaryKo`에 넣지 않는다.
 - `user_articles.classifiedAt`이 null이면 아직 Claude 분류 전이다(마이그레이션 0002). `categoryId = null`만으로는 '미분류'와 '처리 전'을 구분할 수 없어서 둔 컬럼이다. 처리 대상 선택은 이 컬럼으로 한다.
 - `user_articles.deletedAt`이 null이 아니면 사용자가 카드의 X 버튼으로 지운 기사다(마이그레이션 0005, `deleteUserArticle`). 행을 실제로 지우면 다음 수집 때 `saveFetchedArticles`가 같은 기사를 다시 연결하므로 행은 남기고 이 값만 채운다. 공용 `articles` 행은 지우지 않는다. `user_articles`를 읽는 새 조회(목록·개수·분류 대기·노션 저장 등)에는 반드시 `isNull(userArticles.deletedAt)` 조건을 넣는다.
-- Claude 처리는 `src/lib/ai/process-article.ts`(`translateAndClassify`, `classifyOnly`), 배치는 `src/app/dashboard/actions.ts`의 `processNewsBatch`다. 실패한 기사는 클라이언트가 `skipIds`로 넘겨 같은 실행에서 다시 고르지 않는다.
+- Claude 처리는 `src/lib/ai/process-article.ts`(`translateAndClassify`, `classifyOnly`), 배치는 `src/app/(dashboard)/actions.ts`의 `processNewsBatch`다. 실패한 기사는 클라이언트가 `skipIds`로 넘겨 같은 실행에서 다시 고르지 않는다.
 - `user_profiles`는 사용자가 처음 온 기록이다. `ensureDefaultCategories`는 이 행을 처음 넣은 요청에서만 기본 카테고리를 만들므로, 사용자가 카테고리를 모두 지워도 다시 생기지 않는다. 대시보드·`/categories` 진입과 `fetchNews` 시작 때 부른다.
 - 카테고리 이름 '미분류'·'전체'는 예약어라 쓸 수 없다('미분류'는 Claude 분류에서 '맞는 카테고리 없음'을 뜻한다). 카테고리를 추가·수정해도 이미 분류된 기사는 다시 분류하지 않는다.
 - `notion_connections`는 사용자당 한 행이다. `clientId`는 토큰보다 먼저 저장되고, 연결이 끊겨도 토큰 컬럼만 null로 지운다. `databaseId`는 앱이 만든 노션 데이터베이스 ID로, null이면 첫 저장 때 만든다(연결별로 직렬화). 다른 워크스페이스로 재연결하면 null로 비운다.
@@ -55,7 +55,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - 경로를 읽는 Clerk 컴포넌트(`<SignIn>`, `<SignUp>` 등)는 Cache Components 때문에 `<Suspense>`로 감싸야 빌드된다.
   - UI는 `@clerk/localizations`의 `koKR`로 한국어를 쓴다.
 - 경로 별칭: `@/*` → `src/*`
-- 노션 코드: `src/lib/notion/`(`config.ts` 상수·속성 이름, `crypto.ts` AES-256-GCM, `oauth.ts` 등록·인가·토큰 갱신, `mcp.ts` MCP 접속, `save-article.ts` 데이터베이스 생성·행 추가), 쿼리는 `src/db/notion-queries.ts`, 라우트는 `src/app/api/notion/`, 저장 Server Function은 `saveToNotion`(`src/app/dashboard/actions.ts`). Neon HTTP라 세션 잠금이 없어 토큰 갱신·데이터베이스 생성 직렬화는 `refreshLockUntil`·`databaseLockUntil` 조건부 UPDATE로 한다.
+- 대시보드는 라우트 그룹 `src/app/(dashboard)/`라서 주소는 `/`다. 예전 `/dashboard`는 `next.config.ts`의 `redirects`로 `/`에 옮긴다. 링크·리디렉션에 `/dashboard`를 쓰지 않는다.
+- 노션 코드: `src/lib/notion/`(`config.ts` 상수·속성 이름, `crypto.ts` AES-256-GCM, `oauth.ts` 등록·인가·토큰 갱신, `mcp.ts` MCP 접속, `save-article.ts` 데이터베이스 생성·행 추가), 쿼리는 `src/db/notion-queries.ts`, 라우트는 `src/app/api/notion/`, 저장 Server Function은 `saveToNotion`(`src/app/(dashboard)/actions.ts`). Neon HTTP라 세션 잠금이 없어 토큰 갱신·데이터베이스 생성 직렬화는 `refreshLockUntil`·`databaseLockUntil` 조건부 UPDATE로 한다.
 - 주요 라이브러리: `@clerk/nextjs` 7, `drizzle-orm` + `@neondatabase/serverless`, `@anthropic-ai/sdk` 1.x, `@modelcontextprotocol/sdk`, `zod` 4, `rss-parser`.
 
 ## 아키텍처 핵심 (PRD 요약)
@@ -75,7 +76,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | WSJ Markets | `https://feeds.content.dowjones.io/public/rss/RSSMarketsMain` (예전 `feeds.a.dj.com`은 2025-01 이후 갱신 중단) |
 | Investing.com Stock Market News | `https://www.investing.com/rss/news_25.rss` |
 
-- 피드 목록은 `src/lib/news/feeds.ts`, 읽기·파싱은 `src/lib/news/fetch-feeds.ts`, 저장은 `src/db/queries.ts`의 `saveFetchedArticles`, 버튼은 `src/app/dashboard/`의 `fetchNews` Server Function과 `FetchNewsToolbar`다.
+- 피드 목록은 `src/lib/news/feeds.ts`, 읽기·파싱은 `src/lib/news/fetch-feeds.ts`, 저장은 `src/db/queries.ts`의 `saveFetchedArticles`, 버튼은 `src/app/(dashboard)/`의 `fetchNews` Server Function과 `FetchNewsToolbar`다.
 - 수집 범위는 발행 후 24시간 이내다. 발행 시각·링크·제목이 없는 기사는 건너뛴다.
 - 중복 판정 키는 `normalizeUrl`(fetch-feeds.ts)로 정규화한 URL이다. https로 통일하고 `#` 이후, 추적 파라미터(`utm_*`, WSJ의 `mod` 등), 경로 끝 `/`를 지우며 남은 파라미터는 정렬한다. 한 번의 수집 안에서도, DB(`articles.url` 유니크·`ON CONFLICT DO NOTHING`)에서도 이 키로 중복을 막는다. 규칙을 바꾸면 기존 행의 키와 어긋나 중복이 생길 수 있으니 기존 URL에 적용해 보고 바꾼다.
 - Investing.com은 설명이 없고 `pubDate`가 시간대 없이(`2026-11-10 13:44:35`, UTC) 와서 `naiveDateIsUtc`로 처리한다.
@@ -92,7 +93,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `/api/notion/connect`, `/api/notion/callback` | 노션 OAuth 시작과 콜백 |
 
 - 뉴스 카드에는 한국어 제목, 한국어 요약, 출처(Bloomberg/WSJ/Investing.com), 발행 시각, 카테고리, 원문 링크, 'news 저장' 버튼, 오른쪽 위 X(삭제) 버튼을 넣는다.
-- 키워드 검색: `src/app/dashboard/news-search.tsx`의 검색창이 `?q=`로 제출한다(카테고리 탭은 유지, 1페이지부터). 공백으로 나눈 단어가 모두 들어 있는 기사만 고르며(AND, 대소문자 무시), 한국어 제목·요약과 원문 제목·설명에서 찾는다. 조건은 `src/db/queries.ts`의 `keywordWhere`로, `categoryWhere`(사용자·삭제 조건)에 덧붙여 쓴다. 이미 저장한 카드는 '저장됨'으로 표시한다.
+- 키워드 검색: `src/app/(dashboard)/news-search.tsx`의 검색창이 `?q=`로 제출한다(카테고리 탭은 유지, 1페이지부터). 공백으로 나눈 단어가 모두 들어 있는 기사만 고르며(AND, 대소문자 무시), 한국어 제목·요약과 원문 제목·설명에서 찾는다. 조건은 `src/db/queries.ts`의 `keywordWhere`로, `categoryWhere`(사용자·삭제 조건)에 덧붙여 쓴다. 이미 저장한 카드는 '저장됨'으로 표시한다.
 - 노션 데이터베이스 속성: 제목(Title), 요약(Text), 출처(Select), 카테고리(Select), 원문 링크(URL), 발행일(Date), 저장일(Created time). 속성 이름은 코드 상수와 정확히 같아야 한다(PRD 6절 '노션 데이터베이스'). 데이터베이스는 부모 없이 개인 페이지 영역에 만든다.
 
 ## 범위 밖 (구현하지 않음)

@@ -22,7 +22,7 @@ function tabHref(category: string | null, query: string) {
   if (category) params.set("category", category);
   if (query) params.set("q", query);
   const qs = params.toString();
-  return qs ? `/dashboard?${qs}` : "/dashboard";
+  return qs ? `/?${qs}` : "/";
 }
 
 /** 카테고리 탭(ui.md 6절): 전체 → 사용자 카테고리(생성순) → 미분류 → [+ 카테고리] */
