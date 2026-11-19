@@ -22,7 +22,7 @@
 | 테두리 | `border-zinc-200` | `dark:border-zinc-800` |
 | 본문 글자 | `text-zinc-900` | `dark:text-zinc-100` |
 | 보조 글자(요약) | `text-zinc-600` | `dark:text-zinc-400` |
-| 메타 글자(출처·시각) | `text-zinc-500` | `dark:text-zinc-500` |
+| 메타 글자(출처·시각) | `text-zinc-500` | `dark:text-zinc-400` (zinc-900 위 zinc-500은 대비 4.5:1 미만) |
 | 강조(주요 버튼, 선택 탭) | `bg-indigo-600`, `text-indigo-600` | `dark:bg-indigo-500`, `dark:text-indigo-400` |
 | 성공(저장됨, 연결됨) | `text-emerald-600` | `dark:text-emerald-400` |
 | 오류(수집 실패, 연결 만료) | `text-red-600`, `bg-red-50` | `dark:text-red-400`, `dark:bg-red-950/40` |
@@ -40,8 +40,8 @@
 |---|---|
 | 앱 이름(헤더) | `text-lg font-semibold tracking-tight` |
 | 페이지 제목 | `text-xl font-semibold` |
-| 카드 제목 | `text-base font-semibold leading-snug` |
-| 카드 요약·본문 | `text-sm leading-relaxed` |
+| 카드 제목 | `text-[17px] font-semibold leading-[1.45] tracking-[-0.01em]` |
+| 카드 요약·본문 | `text-sm leading-[1.7]` |
 | 메타 정보·배지 | `text-xs` |
 | 숫자(진행률, 시각) | `tabular-nums` 추가 |
 
@@ -208,31 +208,37 @@
 
 ### 카드 구조
 
-위에서 아래로 **메타 줄 → 제목 → 요약 → 하단 동작 줄**이다. 하단 동작 줄은 `mt-auto`로 카드 바닥에 붙여, 요약 길이가 달라도 버튼 위치가 맞게 한다.
+위에서 아래로 **메타 줄(출처·시각) → 제목(원문 링크) → 요약 → 하단 줄(카테고리·저장)** 이다. 먼저 "어디서, 언제" 나온 뉴스인지 읽히게 하고, 탭과 겹치는 정보인 카테고리는 아래로 내린다. 하단 줄은 `mt-auto`로 카드 바닥에 붙여, 요약 길이가 달라도 버튼 위치가 맞게 한다. 실제 구현은 `src/components/news-card.tsx`다.
+
+간격은 `gap` 대신 요소별 여백으로 묶음을 만든다: 메타 줄 → 제목 `mt-3`, 제목 → 요약 `mt-2`(제목과 요약을 한 덩어리로 묶는다), 요약 → 하단 줄 최소 `pt-5`, 구분선 아래 `pt-4`.
 
 ```tsx
 <li>
-  <article className="flex h-full flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-colors hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
-    {/* 메타 줄 */}
-    <div className="flex items-center gap-2 text-xs text-zinc-500">
-      <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{categoryName ?? "미분류"}</span>
-      <span>{source}</span>
-      <span aria-hidden>·</span>
-      <time dateTime={publishedAt.toISOString()} className="tabular-nums">{formatted}</time>
+  <article className="group relative flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-[border-color,opacity] duration-150 hover:border-zinc-300 focus-within:border-zinc-300 motion-reduce:transition-none dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:focus-within:border-zinc-700">
+    <DeleteNewsButton />  {/* 오른쪽 위 X */}
+
+    {/* 메타 줄: 출처는 진하게, 시각은 옅게. 가운뎃점 대신 간격으로 나눈다. */}
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pr-8 text-xs">
+      <span className="font-semibold text-zinc-800 dark:text-zinc-200">{source}</span>
+      <time className="tabular-nums text-zinc-500 dark:text-zinc-400">{formatted}</time>
     </div>
 
-    {/* 제목 */}
-    <h2 className="break-keep text-base font-semibold leading-snug text-zinc-900 dark:text-zinc-100">{titleKo}</h2>
-
-    {/* 요약 */}
-    <p className="line-clamp-4 break-keep text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{summaryKo}</p>
-
-    {/* 하단 동작 줄 */}
-    <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-3 dark:border-zinc-800">
-      <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400">
-        원문 보기 ↗
+    {/* 제목 = 원문 링크. 끝에 작은 ↗ 아이콘 */}
+    <h2 className="mt-3 text-pretty break-keep text-[17px] font-semibold leading-[1.45] tracking-[-0.01em] text-zinc-900 dark:text-zinc-50">
+      <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-700 hover:underline decoration-indigo-300 underline-offset-4 dark:hover:text-indigo-300">
+        {titleKo} <ArrowUpRight /> <span className="sr-only">(원문, 새 탭에서 열림)</span>
       </a>
-      <NotionSaveButton />
+    </h2>
+
+    {/* 요약: 한글은 줄 간격을 넉넉히(1.7) */}
+    <p className="mt-2 line-clamp-4 break-keep text-sm leading-[1.7] text-zinc-600 dark:text-zinc-400">{summaryKo}</p>
+
+    {/* 하단 줄 */}
+    <div className="mt-auto pt-5">
+      <div className="flex items-start justify-between gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+        <CategoryBadge />
+        <NotionSaveButton />
+      </div>
     </div>
   </article>
 </li>
@@ -240,11 +246,14 @@
 
 ### 카드 세부 규칙
 
-- **카테고리 배지:** 모든 카테고리가 같은 회색 배지를 쓴다. 카테고리마다 색을 다르게 하지 않는다. 미분류는 테두리만 있는 배지(`border border-dashed border-zinc-300 bg-transparent`)로 구분한다.
+- **카테고리 배지:** 하단 줄 왼쪽에 둔다(`h-6 px-2.5 rounded-full`). 모든 카테고리가 같은 회색 배지를 쓰고, 카테고리마다 색을 다르게 하지 않는다. 미분류는 테두리만 있는 배지(`border border-dashed border-zinc-300 bg-transparent`)로 구분한다.
 - **출처:** 'Bloomberg', 'WSJ', 'Investing.com'처럼 글자로만 표시한다. 로고는 쓰지 않는다.
 - **발행 시각:** 24시간 이내는 상대 시각('3시간 전'), 그보다 오래되면 'MM월 DD일 HH:mm'(한국 시간)으로 표시한다. `<time>`의 `title` 속성에 전체 날짜를 넣는다.
+- **번역 전:** `titleKo`가 null이면 원문 제목·설명을 보여 주고, 메타 줄에 작은 테두리 배지 '번역 전'을 붙인다.
 - **제목:** 줄 수를 자르지 않는다. 요약만 `line-clamp-4`로 자른다.
-- **원문 링크:** 항상 새 탭으로 연다.
+- **원문 링크:** 제목 자체가 링크이며 항상 새 탭으로 연다. 별도의 '원문 보기' 링크는 두지 않는다.
+- **호버·포커스:** 카드에 마우스를 올리거나 안쪽에 키보드 포커스가 있으면 테두리가 한 단계 짙어지고, 제목 끝 ↗가 오른쪽 위로 2px 움직인다. 제목 위에서는 indigo 글자와 밑줄이 생긴다. 그림자는 키우지 않고 카드를 움직이지 않는다. 모든 전환은 150ms이며 `motion-reduce:transition-none`을 붙인다.
+- **삭제(X) 버튼:** 마우스가 있는 기기(`@media (hover: hover)`)에서는 카드에 호버·포커스가 있을 때만 보인다. 터치 기기에서는 항상 보인다.
 
 ### news 저장 버튼
 
