@@ -35,7 +35,9 @@ export function DeleteNewsButton({
         data-deleting={isPending || undefined}
         aria-label={`‘${title}’ 뉴스 삭제`}
         title="뉴스 삭제"
-        className="inline-flex size-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+        // 마우스가 있는 기기에서는 카드에 호버·포커스가 있을 때만 보인다(카드 article의 group). 터치 기기에서는 항상 보인다.
+        // 지우는 중(disabled)에도 계속 보이게 한다.
+        className="inline-flex size-8 items-center justify-center rounded-lg text-zinc-500 transition-opacity duration-150 motion-reduce:transition-none [@media(hover:hover)]:[.group:not(:hover):not(:focus-within)_&:enabled]:opacity-0 hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
       >
         {isPending ? (
           <svg viewBox="0 0 24 24" fill="none" className="size-4 animate-spin" aria-hidden>

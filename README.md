@@ -142,3 +142,8 @@ scripts/              시드, 노션 도구 확인 스크립트
 
 - 기사 본문은 스크래핑하지 않고 RSS의 제목과 설명만 요약합니다.
 - WSJ·Investing.com 피드의 상업적 이용 조건은 공개 운영 전에 확인해야 합니다.
+
+## 사용한 플러그인
+
+- Frontend Design : UI 디자인 품질 향상
+- commit-commands : 깃 워크플로 자동화
