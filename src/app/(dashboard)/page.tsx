@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { AppHeader } from "@/components/app-header";
+import { AppFooter } from "@/components/app-footer";
 import { NewsCard, NewsCardSkeleton } from "@/components/news-card";
 import { Pagination } from "@/components/pagination";
 import {
@@ -65,6 +66,7 @@ export default function DashboardPage({
           <NewsGrid searchParams={searchParams} />
         </Suspense>
       </main>
+      <AppFooter />
     </div>
   );
 }
