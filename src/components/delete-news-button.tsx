@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { deleteNews } from "@/app/dashboard/actions";
+import { deleteNews } from "@/app/(dashboard)/actions";
 
 /**
  * 카드 오른쪽 위의 X 버튼. 누르면 이 사용자의 목록에서 기사를 지우고, 서버가 목록을 새로 그려 카드가 사라진다.

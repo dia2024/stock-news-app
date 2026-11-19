@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
   }
 
   const response = NextResponse.redirect(
-    new URL(`/dashboard?notion=${result}`, request.url),
+    new URL(`/?notion=${result}`, request.url),
   );
   // verifier와 state는 한 번만 쓴다.
   response.cookies.delete({ name: OAUTH_COOKIE, path: "/api/notion" });

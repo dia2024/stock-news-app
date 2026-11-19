@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveToNotion } from "@/app/dashboard/actions";
+import { saveToNotion } from "@/app/(dashboard)/actions";
 
 /**
  * 카드의 'news 저장' 버튼(ui.md 7절). 저장에 성공하면 서버가 목록을 새로 그려
