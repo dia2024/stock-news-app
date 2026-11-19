@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { AppHeader } from "@/components/app-header";
+import { AppFooter } from "@/components/app-footer";
 import { ensureDefaultCategories, getCategoriesWithCounts } from "@/db/queries";
 import { AddCategoryForm } from "./add-category-form";
 import { CategoryRow } from "./category-row";
@@ -28,6 +29,7 @@ export default function CategoriesPage() {
           <CategoryList />
         </Suspense>
       </main>
+      <AppFooter />
     </div>
   );
 }

@@ -101,6 +101,23 @@
 
 `layout.tsx`의 `metadata.title`도 'Stock 뉴스 수집기'로 맞춘다.
 
+### 푸터
+
+대시보드와 `/categories`의 맨 아래에 `AppFooter`(`src/components/app-footer.tsx`)를 둔다. 로그인·회원가입 화면에는 두지 않는다.
+
+- 내용은 한 줄: 'Copyright 2026 Stock 뉴스 수집기. Powered by Claude'. 링크나 아이콘은 넣지 않는다.
+- 페이지 바깥 틀(`flex min-h-full flex-col`) 안에서 `mt-auto`로 화면 바닥에 붙인다. 뉴스가 적어도 화면 중간에 뜨지 않는다.
+- 위쪽 테두리 한 줄로만 본문과 나누고 배경은 페이지 배경을 그대로 쓴다. 글자는 메타 글자 색(`text-xs text-zinc-500 dark:text-zinc-400`)이다.
+- 문구는 화면 가운데에 둔다(`text-center`). 본문 폭과 관계없이 모든 화면에서 같은 모양이다.
+
+```tsx
+<footer className="mt-auto border-t border-zinc-200 dark:border-zinc-800">
+  <p className="px-4 py-6 text-center text-xs text-zinc-500 sm:px-6 dark:text-zinc-400">
+    Copyright 2026 Stock 뉴스 수집기. Powered by Claude
+  </p>
+</footer>
+```
+
 ## 5. 수집 툴바
 
 '뉴스 가져오기' 버튼, 진행률, 노션 연결 상태를 한 줄에 둔다. 좁은 화면에서는 줄바꿈된다(`flex-wrap`).
