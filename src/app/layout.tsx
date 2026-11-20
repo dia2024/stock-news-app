@@ -22,6 +22,10 @@ const notoSansKr = Noto_Sans_KR({
   preload: false,
 });
 
+// 첫 화면을 그리기 전에 저장된 테마(없으면 시스템 설정)를 <html>에 적용해 깜빡임을 막는다.
+// 키 이름과 값은 src/components/theme-toggle.tsx와 같아야 한다.
+const themeScript = `(function(){try{var t=localStorage.getItem("theme");var d=t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.classList.toggle("dark",d)}catch(e){}})()`;
+
 export const metadata: Metadata = {
   title: "AI 뉴스 수집기",
   description: "해외 주식 뉴스를 한국어로 요약해 보여 주는 수집기",
@@ -33,7 +37,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <html
         lang="ko"
         className={`${geistSans.variable} ${geistMono.variable} ${notoSansKr.variable} h-full antialiased`}
+        // themeScript가 서버 HTML과 다른 class(dark)를 붙이므로 이 요소의 불일치 경고만 끈다.
+        suppressHydrationWarning
       >
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        </head>
         <body className="min-h-full flex flex-col">{children}</body>
       </html>
     </ClerkProvider>

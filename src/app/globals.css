@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* 다크 모드는 시스템 설정이 아니라 <html class="dark">로 켠다(헤더의 ThemeToggle). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ui.md 2절: 페이지 배경 zinc-50 / zinc-950, 본문 글자 zinc-900 / zinc-100 */
 :root {
   --background: #fafafa;
@@ -13,11 +16,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #09090b;
-    --foreground: #f4f4f5;
-  }
+.dark {
+  --background: #09090b;
+  --foreground: #f4f4f5;
+  color-scheme: dark;
 }
 
 body {

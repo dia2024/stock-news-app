@@ -9,7 +9,7 @@
 - **읽기가 먼저다.** 화면의 주인공은 한국어 제목과 요약이다. 장식, 그림자, 색은 최소로 쓰고, 여백과 글자 크기로 위계를 만든다.
 - **색은 의미가 있을 때만 쓴다.** 기본은 흑백(zinc) 계열이다. 강조색(indigo)은 주요 동작과 선택 상태에만, 초록·빨강·노랑은 성공·오류·경고에만 쓴다.
 - **한 화면에 주요 버튼은 하나다.** 대시보드에서는 '뉴스 가져오기'만 채워진(primary) 버튼이다. 나머지는 테두리 버튼이나 텍스트 버튼이다.
-- **라이트·다크 모드를 모두 지원한다.** 시스템 설정을 따르며, 색 클래스를 쓸 때는 `dark:` 짝을 함께 쓴다.
+- **라이트·다크 모드를 모두 지원한다.** 처음에는 시스템 설정을 따르고, 헤더 오른쪽 위의 토글 버튼(`ThemeToggle`)으로 바꾸면 그 선택을 `localStorage`의 `theme`에 저장해 계속 쓴다. `dark:` 변형은 `<html class="dark">`로 켜진다(`globals.css`의 `@custom-variant dark`). 색 클래스를 쓸 때는 `dark:` 짝을 함께 쓴다.
 
 ## 2. 디자인 토큰
 
@@ -84,7 +84,7 @@
 
 ## 4. 헤더
 
-- 왼쪽에 앱 이름 'Stock 뉴스 수집기', 오른쪽에 '카테고리 관리' 링크와 Clerk `<UserButton />`을 둔다.
+- 왼쪽에 앱 이름 'Stock 뉴스 수집기', 오른쪽에 '카테고리 관리' 링크, Clerk `<UserButton />`, 다크/라이트 전환 버튼(`ThemeToggle`, `src/components/theme-toggle.tsx`)을 이 순서로 둔다. 전환 버튼은 아이콘만 있는 버튼이라 `aria-label`로 '다크 모드로 전환'/'라이트 모드로 전환'을 단다.
 - 스크롤해도 보이도록 상단에 고정한다.
 
 ```tsx
@@ -94,6 +94,7 @@
     <nav className="flex items-center gap-4 text-sm">
       <Link href="/categories" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">카테고리 관리</Link>
       <UserButton />
+      <ThemeToggle />
     </nav>
   </div>
 </header>
