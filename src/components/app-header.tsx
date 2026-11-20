@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // ui.md 4절 헤더
 export function AppHeader() {
@@ -20,6 +21,7 @@ export function AppHeader() {
             카테고리 관리
           </Link>
           <UserButton />
+          <ThemeToggle />
         </nav>
       </div>
     </header>
