@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { koKR } from "@clerk/localizations";
 import { Geist, Geist_Mono, Noto_Sans_KR } from "next/font/google";
+import { InlineScript } from "@/components/inline-script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -41,7 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         suppressHydrationWarning
       >
         <head>
-          <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+          <InlineScript html={themeScript} />
         </head>
         <body className="min-h-full flex flex-col">{children}</body>
       </html>
